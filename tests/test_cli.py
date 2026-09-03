@@ -55,7 +55,7 @@ def test_ensure_spyproject_reuses_existing(tmp_path: Path) -> None:
 
 
 def test_apply_spyder_config_sets_font_and_wrap(tmp_path: Path) -> None:
-    font, wrap = cli.apply_spyder_config(tmp_path)
+    font, wrap = cli.apply_spyder_config(tmp_path, font_family="JetBrains Mono")
     assert font == ["JetBrains Mono"]
     assert wrap is True
     ini = tmp_path / "config" / "spyder.ini"
@@ -63,6 +63,38 @@ def test_apply_spyder_config_sets_font_and_wrap(tmp_path: Path) -> None:
     text = ini.read_text()
     assert "JetBrains Mono" in text
     assert "wrap = True" in text
+
+
+def test_resolve_editor_font_uses_jetbrains_when_installed(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    font = tmp_path / "JetBrainsMono-Regular.ttf"
+    font.write_bytes(b"")
+    monkeypatch.setattr(cli, "FONT_DIRS", (tmp_path,))
+    family, hits = cli.resolve_editor_font()
+    assert family == "JetBrains Mono"
+    assert font in hits
+
+
+def test_resolve_editor_font_falls_back_to_spyder_default(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(cli, "FONT_DIRS", (tmp_path,))
+    family, hits = cli.resolve_editor_font()
+    assert family == "Menlo"
+    assert hits == []
+
+
+def test_apply_spyder_config_falls_back_when_jetbrains_missing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(cli, "jetbrains_mono_installed", lambda: [])
+    font, wrap = cli.apply_spyder_config(tmp_path)
+    assert font == ["Menlo"]
+    assert wrap is True
+    text = (tmp_path / "config" / "spyder.ini").read_text()
+    assert "Menlo" in text
+    assert "JetBrains Mono" not in text
 
 
 def test_launch_no_launch_creates_project_and_skips_gui(

@@ -23,11 +23,13 @@ class FakeCONF:
         conf_dir = Path(os.environ["SPYDER_CONFDIR"])
         ini = conf_dir / "config" / "spyder.ini"
         ini.parent.mkdir(parents=True, exist_ok=True)
+        font = cls.data.get(("appearance", "font/family"), ["JetBrains Mono"])
+        wrap = cls.data.get(("editor", "wrap"), True)
         ini.write_text(
             "[appearance]\n"
-            "font/family = ['JetBrains Mono']\n"
+            f"font/family = {font!r}\n"
             "[editor]\n"
-            "wrap = True\n"
+            f"wrap = {wrap}\n"
         )
 
     @classmethod
@@ -71,6 +73,12 @@ def fake_spyder(monkeypatch: pytest.MonkeyPatch) -> None:
     projects.api = api
 
     config = _module("spyder.config", monkeypatch)
+    fonts = _module(
+        "spyder.config.fonts",
+        monkeypatch,
+        MONOSPACE=["Menlo", "Monospace"],
+    )
     manager = _module("spyder.config.manager", monkeypatch, CONF=FakeCONF)
+    config.fonts = fonts
     config.manager = manager
     spyder.config = config

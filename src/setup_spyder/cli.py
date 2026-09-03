@@ -123,6 +123,31 @@ def jetbrains_mono_installed() -> list[Path]:
     return hits
 
 
+def spyder_default_font() -> str:
+    """Fonte monoespaçada padrão do Spyder (Menlo no macOS, Ubuntu Mono, etc.)."""
+    try:
+        from spyder.config.fonts import MONOSPACE
+
+        return MONOSPACE[0]
+    except Exception:
+        return "Monospace"
+
+
+def resolve_editor_font() -> tuple[str, list[Path]]:
+    """Tenta JetBrains Mono; se não estiver instalada, usa a fonte padrão do Spyder."""
+    try:
+        hits = jetbrains_mono_installed()
+        if not hits:
+            raise FileNotFoundError(FONT_FAMILY)
+        return FONT_FAMILY, hits
+    except Exception:
+        default = spyder_default_font()
+        log_warn(
+            f"{FONT_FAMILY} indisponível; usando a fonte padrão do Spyder ({default})"
+        )
+        return default, []
+
+
 def ensure_spyproject(root: Path) -> Path:
     """Cria `.spyproject` no repositório aberto, se ainda não existir."""
     spyproject = root / ".spyproject"
@@ -148,12 +173,17 @@ def ensure_spyproject(root: Path) -> Path:
     return spyproject
 
 
-def apply_spyder_config(conf_dir: Path) -> tuple[object, object]:
+def apply_spyder_config(
+    conf_dir: Path, font_family: str | None = None
+) -> tuple[object, object]:
     os.environ["SPYDER_CONFDIR"] = str(conf_dir)
     from spyder.config.manager import CONF
 
-    log(f"Aplicando fonte padrão {FONT_FAMILY!r}")
-    CONF.set("appearance", "font/family", [FONT_FAMILY])
+    if font_family is None:
+        font_family, _ = resolve_editor_font()
+
+    log(f"Aplicando fonte {font_family!r}")
+    CONF.set("appearance", "font/family", [font_family])
     log("Ligando wrap lines no editor (editor.wrap = True)")
     CONF.set("editor", "wrap", True)
 
@@ -206,18 +236,13 @@ def launch(
     else:
         log_ok(f"pandas {pd.__version__}")
 
-    fonts = jetbrains_mono_installed()
+    font_family, fonts = resolve_editor_font()
     if fonts:
-        log_ok(f"Fonte {FONT_FAMILY} encontrada ({len(fonts)} arquivo(s))")
+        log_ok(f"Fonte {font_family} encontrada ({len(fonts)} arquivo(s))")
         for path in fonts[:8]:
             log_kv("arquivo", path)
         if len(fonts) > 8:
             log_kv("...", f"mais {len(fonts) - 8} arquivo(s)")
-    else:
-        log_warn(
-            f"não achei arquivos de {FONT_FAMILY} nas pastas de fontes. "
-            "O Spyder pode cair na fonte fallback."
-        )
 
     spyproject = ensure_spyproject(workdir)
 
@@ -226,7 +251,7 @@ def launch(
     log("(não mexe no ~/.spyder-py3 do usuário)")
 
     try:
-        font, wrap = apply_spyder_config(conf_dir)
+        font, wrap = apply_spyder_config(conf_dir, font_family=font_family)
         log_ok("Config gravada. Conferindo valores:")
         log_kv("appearance.font/family", font)
         log_kv("editor.wrap", wrap)
