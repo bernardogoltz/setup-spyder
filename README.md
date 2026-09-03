@@ -7,6 +7,9 @@ manager.
 ```shell
 curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
+```
+uvx --from setup-spyder setup-spyder
+```
 ### 2. add the package @ `pyproject.toml`
 ```shell
 uv add setup-spyder
