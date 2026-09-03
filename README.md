@@ -12,6 +12,11 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 ```shell
 uv add git+https://github.com/bernardogoltz/setup-spyder
 ```
+
+```shell
+uv run setup-spyder
+```
+## __Actually readable section:__
 ## Why this repository exists?
 - Spyder could be considered the best IDE/Tool for either doing EDA and teaching Python, Data Science, Analytics and more due to it's Variable Explorer, Interactive IPython Console and Graphics Engine for  Data Visualization. 
 - Many frustrated tentatives of emulating the spyder experience in VSCode-ish IDE's where thought I could got a great Software Engineering Platform the understanding of data were prejudicated. 
@@ -30,10 +35,6 @@ uv add git+https://github.com/bernardogoltz/setup-spyder
 ## Use in another repository
 
 Add this repo as a dependency (no need to clone it into the other project):
-
-```shell
-uv add git+https://github.com/bernardogoltz/setup-spyder
-```
 
 That installs Spyder 5.x into the other project's environment. Then open it from that repo:
 
