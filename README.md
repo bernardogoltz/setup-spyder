@@ -71,10 +71,12 @@ That builds a throwaway project in `tests/fixture_integration/` and, inside it:
 
 1. installs `setup-spyder` straight from GitHub (`uv add git+...`),
 2. checks that `import setup_spyder` works,
-3. runs `uv run setup-spyder`, opening Spyder on that project.
+3. runs `uv run setup-spyder`, opening Spyder on that project,
+4. prints a summary of every step, then deletes the throwaway project.
 
 Nothing there imports `src/` — it is a real outside consumer, same as any other
-repository would be.
+repository would be. The install lands in the fixture's own `.venv/`, which is
+erased at the end, so your main environment is never touched.
 
 ### Flags
 
@@ -84,6 +86,7 @@ repository would be.
 | `--local` | Installs the local working tree instead of GitHub — use it to test changes you have not pushed yet. |
 | `--ref develop` | Installs from another branch, tag or commit. |
 | `--fresh` | Deletes the throwaway project first and rebuilds it from scratch. |
+| `--keep` | Skips the cleanup, so you can inspect the fixture — handy after a failure. |
 
 Anything after `--` goes to `setup-spyder`:
 
@@ -94,8 +97,9 @@ uv run integration --fresh -- main.py
 ### Generated files
 
 The routine writes the fixture's `pyproject.toml`, `uv.lock`, `main.py`,
-`.venv/` and `.spyproject/`. All of them are gitignored — only the fixture's
-`README.md` is versioned, so `--fresh` is always safe.
+`.venv/` and `.spyproject/`, and removes all five when it finishes — pass
+`--keep` to hold on to them. They are gitignored either way; only the fixture's
+`README.md` is versioned, so nothing you care about can be deleted.
 
 ## Tests
 

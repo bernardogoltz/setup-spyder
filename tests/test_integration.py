@@ -15,6 +15,7 @@ def test_parse_args_defaults() -> None:
     assert args.local is False
     assert args.fresh is False
     assert args.no_launch is False
+    assert args.keep is False
     assert args.spyder_args == []
 
 
@@ -118,7 +119,42 @@ def test_run_integration_installs_from_github_then_launches(
     assert add[-1] == f"git+{REPO_URL}"
     assert check[:4] == ["/usr/bin/uv", "run", "python", "-c"]
     assert launch == ["/usr/bin/uv", "run", "setup-spyder"]
-    assert (fake_repo / integration.FIXTURE_RELPATH / "main.py").is_file()
+
+
+def test_run_integration_cleans_the_fixture_afterwards(
+    fake_repo: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _record_runs(monkeypatch)
+    fixture = fake_repo / integration.FIXTURE_RELPATH
+    (fixture / "README.md").write_text("keep-me\n")
+
+    assert integration.run_integration() == 0
+
+    assert not (fixture / "pyproject.toml").exists()
+    assert not (fixture / "main.py").exists()
+    assert (fixture / "README.md").read_text() == "keep-me\n"
+
+
+def test_run_integration_keeps_the_fixture_with_keep(
+    fake_repo: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _record_runs(monkeypatch)
+    fixture = fake_repo / integration.FIXTURE_RELPATH
+
+    assert integration.run_integration(keep=True) == 0
+
+    assert (fixture / "pyproject.toml").is_file()
+    assert (fixture / "main.py").is_file()
+
+
+def test_run_integration_cleans_up_after_a_failure(
+    fake_repo: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _record_runs(monkeypatch, returncode=1)
+    fixture = fake_repo / integration.FIXTURE_RELPATH
+
+    assert integration.run_integration() == 1
+    assert not (fixture / "pyproject.toml").exists()
 
 
 def test_run_integration_no_launch_and_extra_args(
@@ -157,5 +193,5 @@ def test_run_integration_fresh_recreates_fixture(
     fixture = fake_repo / integration.FIXTURE_RELPATH
     (fixture / "main.py").write_text("# stale\n")
 
-    assert integration.run_integration(fresh=True) == 0
+    assert integration.run_integration(fresh=True, keep=True) == 0
     assert "# stale" not in (fixture / "main.py").read_text()
