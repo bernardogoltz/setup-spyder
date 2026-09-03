@@ -2,7 +2,6 @@
 Run [Spyder-IDE](https://www.spyder-ide.org/) @ version 5.6 (great tool for Exploratory Data Analysis) within a isolated Virtual-Environment using [uv](https://docs.astral.sh/uv/) package 
 manager. 
 ## __quick launch__ `[tl;dr]`
-
 ### System requirements
 #### Requires [uv](https://docs.astral.sh/uv/)
 ```shell

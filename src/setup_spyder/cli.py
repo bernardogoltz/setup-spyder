@@ -11,6 +11,12 @@ import tempfile
 from collections.abc import Sequence
 from pathlib import Path
 
+from rich import box
+from rich.console import Console
+from rich.panel import Panel
+from rich.table import Table
+from rich.text import Text
+
 FONT_FAMILY = "JetBrains Mono"
 FONT_DIRS = (
     Path.home() / "Library" / "Fonts",
@@ -20,13 +26,91 @@ FONT_DIRS = (
 )
 REPO_URL = "https://github.com/bernardogoltz/setup-spyder"
 
+console = Console(highlight=False)
+
+
+def _prefix() -> Text:
+    return Text("setup-spyder", style="bold cyan")
+
 
 def log(message: str) -> None:
-    print(f"[setup-spyder] {message}", flush=True)
+    console.print(Text.assemble(_prefix(), "  ", (message, "white")), soft_wrap=True)
+
+
+def log_ok(message: str) -> None:
+    console.print(
+        Text.assemble(_prefix(), "  ", ("✓ ", "bold green"), (message, "green")),
+        soft_wrap=True,
+    )
+
+
+def log_warn(message: str) -> None:
+    console.print(
+        Text.assemble(_prefix(), "  ", ("! ", "bold yellow"), (message, "yellow")),
+        soft_wrap=True,
+    )
+
+
+def log_error(message: str) -> None:
+    console.print(
+        Text.assemble(_prefix(), "  ", ("✗ ", "bold red"), (message, "red")),
+        soft_wrap=True,
+    )
 
 
 def log_kv(key: str, value: object) -> None:
-    log(f"  {key}: {value}")
+    console.print(
+        Text.assemble(
+            _prefix(),
+            "    ",
+            (f"{key}: ", "dim cyan"),
+            (str(value), "bold white"),
+        ),
+        soft_wrap=True,
+    )
+
+
+def print_banner(version: str, workdir: Path) -> None:
+    body = Text()
+    body.append("setup-spyder", style="bold white")
+    body.append(f"  v{version}\n", style="dim")
+    body.append("Spyder 5.x isolado", style="cyan")
+    body.append("  ·  ", style="dim")
+    body.append(FONT_FAMILY, style="magenta")
+    body.append("  ·  ", style="dim")
+    body.append("wrap lines\n\n", style="green")
+    body.append("Olá — abrindo o projeto ", style="white")
+    body.append(workdir.name, style="bold bright_cyan")
+    body.append("\n")
+    body.append(str(workdir), style="dim")
+    console.print()
+    console.print(
+        Panel(
+            body,
+            title="[bold cyan]◆ setup-spyder[/]",
+            subtitle="[dim]ambiente isolado · não mexe no ~/.spyder-py3[/]",
+            border_style="bright_cyan",
+            box=box.ROUNDED,
+            padding=(1, 2),
+        )
+    )
+    console.print()
+
+
+def print_env(workdir: Path) -> None:
+    table = Table(
+        box=box.SIMPLE,
+        show_header=False,
+        padding=(0, 2),
+        expand=False,
+    )
+    table.add_column(style="dim cyan")
+    table.add_column(style="bold white")
+    table.add_row("Python", sys.version.split()[0])
+    table.add_row("Executável", sys.executable)
+    table.add_row("Ambiente", sys.prefix)
+    table.add_row("Workdir", str(workdir))
+    console.print(table)
 
 
 def jetbrains_mono_installed() -> list[Path]:
@@ -43,7 +127,7 @@ def ensure_spyproject(root: Path) -> Path:
     """Cria `.spyproject` no repositório aberto, se ainda não existir."""
     spyproject = root / ".spyproject"
     if spyproject.is_dir():
-        log(f".spyproject já existe: {spyproject}")
+        log_ok(f".spyproject já existe: {spyproject}")
         return spyproject
 
     log(f"Criando .spyproject em {root}")
@@ -56,11 +140,11 @@ def ensure_spyproject(root: Path) -> Path:
         path.relative_to(root) for path in spyproject.rglob("*") if path.is_file()
     )
     if files:
-        log(f".spyproject pronto ({len(files)} arquivo(s)):")
+        log_ok(f".spyproject pronto ({len(files)} arquivo(s)):")
         for relative in files:
             log_kv("arquivo", relative)
     else:
-        log("AVISO: .spyproject criado, mas nenhum arquivo de config apareceu")
+        log_warn(".spyproject criado, mas nenhum arquivo de config apareceu")
     return spyproject
 
 
@@ -97,49 +181,41 @@ def launch(
     workdir = Path(workdir).resolve() if workdir else Path.cwd().resolve()
     extra_args = [a for a in spyder_args if a != "--"]
 
-    log("=" * 60)
-    log(f"setup-spyder {__version__}")
-    log("Spyder 5.x isolado + JetBrains Mono + wrap lines")
-    log("=" * 60)
-
-    log(f"Python executável: {sys.executable}")
-    log(f"Python versão: {sys.version.split()[0]}")
-    log(f"Ambiente isolado: {sys.prefix}")
-    log(f"Repositório atual (workdir): {workdir}")
+    print_banner(__version__, workdir)
+    print_env(workdir)
 
     try:
         import spyder
         import spyder_kernels
     except ImportError as exc:
-        log(f"ERRO: dependência ausente ({exc}).")
+        log_error(f"dependência ausente ({exc}).")
         log("No outro repositório, adicione este pacote:")
-        log(f"  uv add git+{REPO_URL}")
+        log_kv("instalar", f"uv add git+{REPO_URL}")
         log("Ou rode sem instalar no projeto:")
-        log(f"  uvx --from git+{REPO_URL} setup-spyder")
+        log_kv("oneshot", f"uvx --from git+{REPO_URL} setup-spyder")
         return 1
 
-    log(f"Spyder encontrado: {spyder.__version__}")
-    log(f"spyder-kernels: {spyder_kernels.__version__}")
+    log_ok(f"Spyder {spyder.__version__}  ·  spyder-kernels {spyder_kernels.__version__}")
     if not spyder.__version__.startswith("5."):
-        log(f"AVISO: esperado Spyder 5.x, veio {spyder.__version__}")
+        log_warn(f"esperado Spyder 5.x, veio {spyder.__version__}")
 
     try:
         import pandas as pd
     except ImportError:
-        log("pandas: não instalado neste ambiente")
+        log_warn("pandas não instalado neste ambiente")
     else:
-        log(f"pandas: {pd.__version__}")
+        log_ok(f"pandas {pd.__version__}")
 
     fonts = jetbrains_mono_installed()
     if fonts:
-        log(f"Fonte {FONT_FAMILY} encontrada no sistema ({len(fonts)} arquivo(s)):")
+        log_ok(f"Fonte {FONT_FAMILY} encontrada ({len(fonts)} arquivo(s))")
         for path in fonts[:8]:
             log_kv("arquivo", path)
         if len(fonts) > 8:
             log_kv("...", f"mais {len(fonts) - 8} arquivo(s)")
     else:
-        log(
-            f"AVISO: não achei arquivos de {FONT_FAMILY} nas pastas de fontes. "
+        log_warn(
+            f"não achei arquivos de {FONT_FAMILY} nas pastas de fontes. "
             "O Spyder pode cair na fonte fallback."
         )
 
@@ -151,25 +227,25 @@ def launch(
 
     try:
         font, wrap = apply_spyder_config(conf_dir)
-        log("Config gravada. Conferindo valores:")
+        log_ok("Config gravada. Conferindo valores:")
         log_kv("appearance.font/family", font)
         log_kv("editor.wrap", wrap)
 
         ini_path = conf_dir / "config" / "spyder.ini"
         if ini_path.is_file():
             log(f"Arquivo de config: {ini_path}")
-            log(f"Tamanho: {ini_path.stat().st_size} bytes")
+            log_kv("tamanho", f"{ini_path.stat().st_size} bytes")
         else:
-            log(f"AVISO: esperado {ini_path}, mas o arquivo ainda não existe")
+            log_warn(f"esperado {ini_path}, mas o arquivo ainda não existe")
 
         if no_launch:
-            log("no_launch=True: setup concluído sem abrir o Spyder.")
+            log_ok("no_launch=True: setup concluído sem abrir o Spyder.")
             log(f"Projeto Spyder permanece em {spyproject}")
             return 0
 
         spyder_bin = shutil.which("spyder")
         if spyder_bin is None:
-            log("ERRO: executável 'spyder' não está no PATH deste ambiente.")
+            log_error("executável 'spyder' não está no PATH deste ambiente.")
             return 1
 
         cmd = [
@@ -183,19 +259,22 @@ def launch(
             str(workdir),
             *extra_args,
         ]
-        log("Abrindo Spyder:")
-        log("  " + " ".join(cmd))
+        log_ok("Abrindo o Spyder agora...")
+        log_kv("comando", " ".join(cmd))
         log("Feche a janela do Spyder para encerrar (e apagar a config isolada).")
         completed = subprocess.run(cmd, check=False)
-        log(f"Spyder encerrou com código {completed.returncode}")
+        if completed.returncode == 0:
+            log_ok(f"Spyder encerrou com código {completed.returncode}")
+        else:
+            log_warn(f"Spyder encerrou com código {completed.returncode}")
         return completed.returncode
     finally:
         if keep_config:
-            log(f"keep_config=True: mantendo {conf_dir}")
+            log_warn(f"keep_config=True: mantendo {conf_dir}")
         else:
             log(f"Removendo config isolada: {conf_dir}")
             shutil.rmtree(conf_dir, ignore_errors=True)
-            log("Cleanup concluído.")
+            log_ok("Cleanup concluído.")
 
 
 def parse_args(argv: Sequence[str] | None) -> argparse.Namespace:
