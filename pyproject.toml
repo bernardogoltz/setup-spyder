@@ -42,6 +42,13 @@ Issues = "https://github.com/bernardogoltz/setup-spyder/issues"
 setup-spyder = "setup_spyder.cli:main"
 setup-spyder-integration = "setup_spyder.integration:main"
 
+[tool.uv]
+# PyQt5-Qt5 / PyQtWebEngine-Qt5 5.15.19 ship no win_amd64 wheel, so the lock
+# has to fork the resolution and keep a Windows-installable Qt for Windows.
+required-environments = [
+    "sys_platform == 'win32' and platform_machine == 'AMD64'",
+]
+
 [dependency-groups]
 dev = [
     "pytest>=8",
