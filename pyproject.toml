@@ -1,13 +1,21 @@
 [project]
-name = "setup-data-analytics"
+name = "setup-spyder"
 version = "0.1.0"
-description = "Add your description here"
+description = "Importable Spyder 5.x launcher (JetBrains Mono, wrap lines) for other repositories."
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.11,<3.13"
 dependencies = [
-    "ipykernel>=6.31.0",
-    "jupyter-client>=8.10.0",
     "pandas>=3.0.5",
-    "pyzmq>=27.2.0",
-    "spyder-kernels==3.1.4",
+    "spyder>=5.5,<6",
 ]
+
+[project.urls]
+Homepage = "https://github.com/bernardogoltz/setup-spyder"
+Repository = "https://github.com/bernardogoltz/setup-spyder"
+
+[project.scripts]
+setup-spyder = "setup_spyder.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
