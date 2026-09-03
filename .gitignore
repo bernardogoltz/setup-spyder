@@ -19,3 +19,6 @@ wheels/
 tests/fixture_integration/pyproject.toml
 tests/fixture_integration/uv.lock
 tests/fixture_integration/main.py
+
+# Notas internas (não versionadas)
+.docs/
