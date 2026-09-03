@@ -8,3 +8,6 @@ wheels/
 
 # Virtual environments
 .venv
+
+# Spyder project (criado ao abrir o launcher)
+.spyproject/

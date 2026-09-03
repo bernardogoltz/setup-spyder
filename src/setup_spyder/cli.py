@@ -39,6 +39,31 @@ def jetbrains_mono_installed() -> list[Path]:
     return hits
 
 
+def ensure_spyproject(root: Path) -> Path:
+    """Cria `.spyproject` no repositório aberto, se ainda não existir."""
+    spyproject = root / ".spyproject"
+    if spyproject.is_dir():
+        log(f".spyproject já existe: {spyproject}")
+    else:
+        log(f"Criando .spyproject em {root}")
+
+    (spyproject / "config").mkdir(parents=True, exist_ok=True)
+    from spyder.plugins.projects.api import EmptyProject
+
+    EmptyProject(root_path=str(root))
+
+    files = sorted(
+        path.relative_to(root) for path in spyproject.rglob("*") if path.is_file()
+    )
+    if files:
+        log(f".spyproject pronto ({len(files)} arquivo(s)):")
+        for relative in files:
+            log_kv("arquivo", relative)
+    else:
+        log("AVISO: .spyproject criado, mas nenhum arquivo de config apareceu")
+    return spyproject
+
+
 def apply_spyder_config(conf_dir: Path) -> tuple[object, object]:
     os.environ["SPYDER_CONFDIR"] = str(conf_dir)
     from spyder.config.manager import CONF
@@ -60,7 +85,7 @@ def launch(
     keep_config: bool = False,
     workdir: str | Path | None = None,
 ) -> int:
-    """Configura o Spyder 5.x e abre a IDE. Use isto ao importar o pacote.
+    """Configura o Spyder 5.x, cria `.spyproject` no repositório e abre a IDE.
 
     Em outro repositório::
 
@@ -118,6 +143,8 @@ def launch(
             "O Spyder pode cair na fonte fallback."
         )
 
+    spyproject = ensure_spyproject(workdir)
+
     conf_dir = Path(tempfile.mkdtemp(prefix="setup-spyder-conf-"))
     log(f"Config isolada em: {conf_dir}")
     log("(não mexe no ~/.spyder-py3 do usuário)")
@@ -137,6 +164,7 @@ def launch(
 
         if no_launch:
             log("no_launch=True: setup concluído sem abrir o Spyder.")
+            log(f"Projeto Spyder permanece em {spyproject}")
             return 0
 
         spyder_bin = shutil.which("spyder")
@@ -150,6 +178,8 @@ def launch(
             str(conf_dir),
             "--new-instance",
             "-w",
+            str(workdir),
+            "-p",
             str(workdir),
             *extra_args,
         ]

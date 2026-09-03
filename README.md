@@ -1,10 +1,16 @@
 # setup-spyder
 Run [Spyder-IDE](https://www.spyder-ide.org/) @ version 5.6 (great tool for Exploratory Data Analysis) within a isolated Virtual-Environment using [uv](https://docs.astral.sh/uv/) package 
 manager. 
-## System requirements
-### Requires [uv](https://docs.astral.sh/uv/)
+## __quick launch__ `[tl;dr]`
+
+### System requirements
+#### Requires [uv](https://docs.astral.sh/uv/)
 ```shell
 curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+### 2. add the package @ `pyproject.toml`
+```shell
+uv add git+https://github.com/bernardogoltz/setup-spyder
 ```
 ## Why this repository exists?
 - Spyder could be considered the best IDE/Tool for either doing EDA and teaching Python, Data Science, Analytics and more due to it's Variable Explorer, Interactive IPython Console and Graphics Engine for  Data Visualization. 
