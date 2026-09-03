@@ -1,9 +1,17 @@
-name: Publish to PyPI
+name: Publish
 
 on:
   release:
     types: [published]
   workflow_dispatch:
+    inputs:
+      target:
+        description: "Index to publish to"
+        type: choice
+        options:
+          - testpypi
+          - pypi
+        default: testpypi
 
 jobs:
   test:
@@ -16,18 +24,71 @@ jobs:
       - name: Run unit tests
         run: uv run pytest -v
 
-  publish:
+  build:
     needs: test
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      id-token: write
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
         with:
           python-version: "3.11"
-      - name: Build package
+
+      - name: Check the release tag matches the package version
+        if: github.event_name == 'release'
+        run: |
+          version="$(sed -n 's/^__version__ = "\(.*\)"$/\1/p' src/setup_spyder/__init__.py)"
+          tag="${GITHUB_REF_NAME#v}"
+          echo "package version: $version"
+          echo "release tag:     $tag"
+          if [ "$version" != "$tag" ]; then
+            echo "::error::tag '$tag' does not match __version__ '$version'; bump src/setup_spyder/__init__.py before releasing"
+            exit 1
+          fi
+
+      - name: Build wheel and sdist
         run: uv build
+
+      - name: Validate package metadata
+        run: uvx twine check --strict dist/*
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  publish-testpypi:
+    needs: build
+    if: github.event_name == 'workflow_dispatch' && inputs.target == 'testpypi'
+    runs-on: ubuntu-latest
+    environment: testpypi
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: astral-sh/setup-uv@v5
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - name: Publish to TestPyPI
+        run: |
+          uv publish \
+            --publish-url https://test.pypi.org/legacy/ \
+            --check-url https://test.pypi.org/simple/
+
+  publish-pypi:
+    needs: build
+    if: github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && inputs.target == 'pypi')
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: astral-sh/setup-uv@v5
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
       - name: Publish to PyPI
-        run: uv publish
+        run: uv publish --check-url https://pypi.org/simple/

@@ -9,7 +9,7 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 ### 2. add the package @ `pyproject.toml`
 ```shell
-uv add git+https://github.com/bernardogoltz/setup-spyder
+uv add setup-spyder
 ```
 
 ```shell
@@ -33,7 +33,17 @@ uv run setup-spyder
 
 ## Use in another repository
 
-Add this repo as a dependency (no need to clone it into the other project):
+Add it as a dependency (no need to clone this repo into the other project):
+
+```shell
+uv add setup-spyder
+```
+
+Or straight from git, to track `main` ahead of a release:
+
+```shell
+uv add git+https://github.com/bernardogoltz/setup-spyder
+```
 
 That installs Spyder 5.x into the other project's environment. Then open it from that repo:
 
@@ -55,7 +65,7 @@ if __name__ == "__main__":
 Without adding it to the project:
 
 ```shell
-uvx --from git+https://github.com/bernardogoltz/setup-spyder setup-spyder
+uvx --from setup-spyder setup-spyder
 ```
 
 ## Integration routine
@@ -64,7 +74,7 @@ One command to answer one question: **does this package actually work when
 someone installs it from GitHub?**
 
 ```shell
-uv run integration
+uv run setup-spyder-integration
 ```
 
 That builds a throwaway project in `tests/fixture_integration/` and, inside it:
@@ -91,7 +101,7 @@ erased at the end, so your main environment is never touched.
 Anything after `--` goes to `setup-spyder`:
 
 ```shell
-uv run integration --fresh -- main.py
+uv run setup-spyder-integration --fresh -- main.py
 ```
 
 ### Generated files
@@ -110,3 +120,28 @@ uv sync
 uv run pytest -v
 ```
 
+## Releasing to PyPI
+
+Publishing runs on [trusted publishing](https://docs.pypi.org/trusted-publishers/)
+— no API token lives in this repo. One-time setup, on both `pypi.org` and
+`test.pypi.org` (Account → Publishing → add a pending publisher):
+
+| Field | Value |
+| --- | --- |
+| PyPI project name | `setup-spyder` |
+| Owner | `bernardogoltz` |
+| Repository | `setup-spyder` |
+| Workflow name | `publish.yml` |
+| Environment | `pypi` (or `testpypi`) |
+
+Then create the matching GitHub environments (Settings → Environments) with the
+same names, so the OIDC claim is environment-scoped.
+
+To cut a release:
+
+1. Bump `__version__` in `src/setup_spyder/__init__.py` — it is the single
+   source of truth; `pyproject.toml` reads it via `[tool.hatch.version]`.
+2. Run the **Publish** workflow manually with `target: testpypi` and check the
+   rendered page plus a clean install.
+3. Tag and publish a GitHub release named `v<version>`. The workflow refuses to
+   build if the tag and `__version__` disagree, then publishes to PyPI.

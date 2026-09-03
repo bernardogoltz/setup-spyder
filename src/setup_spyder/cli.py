@@ -1,4 +1,4 @@
-"""Configura e abre o Spyder 5.x de forma isolada e verbosa."""
+"""Configure and open Spyder 5.x in an isolated, verbose way."""
 
 from __future__ import annotations
 
@@ -74,12 +74,12 @@ def print_banner(version: str, workdir: Path) -> None:
     body = Text()
     body.append("setup-spyder", style="bold white")
     body.append(f"  v{version}\n", style="dim")
-    body.append("Spyder 5.x isolado", style="cyan")
+    body.append("isolated Spyder 5.x", style="cyan")
     body.append("  ·  ", style="dim")
     body.append(FONT_FAMILY, style="magenta")
     body.append("  ·  ", style="dim")
     body.append("wrap lines\n\n", style="green")
-    body.append("Olá — abrindo o projeto ", style="white")
+    body.append("Hello — opening the project ", style="white")
     body.append(workdir.name, style="bold bright_cyan")
     body.append("\n")
     body.append(str(workdir), style="dim")
@@ -88,7 +88,7 @@ def print_banner(version: str, workdir: Path) -> None:
         Panel(
             body,
             title="[bold cyan]◆ setup-spyder[/]",
-            subtitle="[dim]ambiente isolado · não mexe no ~/.spyder-py3[/]",
+            subtitle="[dim]isolated environment · leaves ~/.spyder-py3 untouched[/]",
             border_style="bright_cyan",
             box=box.ROUNDED,
             padding=(1, 2),
@@ -107,8 +107,8 @@ def print_env(workdir: Path) -> None:
     table.add_column(style="dim cyan")
     table.add_column(style="bold white")
     table.add_row("Python", sys.version.split()[0])
-    table.add_row("Executável", sys.executable)
-    table.add_row("Ambiente", sys.prefix)
+    table.add_row("Executable", sys.executable)
+    table.add_row("Environment", sys.prefix)
     table.add_row("Workdir", str(workdir))
     console.print(table)
 
@@ -124,7 +124,7 @@ def jetbrains_mono_installed() -> list[Path]:
 
 
 def spyder_default_font() -> str:
-    """Fonte monoespaçada padrão do Spyder (Menlo no macOS, Ubuntu Mono, etc.)."""
+    """Spyder's default monospace font (Menlo on macOS, Ubuntu Mono, etc.)."""
     try:
         from spyder.config.fonts import MONOSPACE
 
@@ -134,7 +134,7 @@ def spyder_default_font() -> str:
 
 
 def resolve_editor_font() -> tuple[str, list[Path]]:
-    """Tenta JetBrains Mono; se não estiver instalada, usa a fonte padrão do Spyder."""
+    """Try JetBrains Mono; fall back to Spyder's default font when missing."""
     try:
         hits = jetbrains_mono_installed()
         if not hits:
@@ -143,19 +143,19 @@ def resolve_editor_font() -> tuple[str, list[Path]]:
     except Exception:
         default = spyder_default_font()
         log_warn(
-            f"{FONT_FAMILY} indisponível; usando a fonte padrão do Spyder ({default})"
+            f"{FONT_FAMILY} unavailable; using Spyder's default font ({default})"
         )
         return default, []
 
 
 def ensure_spyproject(root: Path) -> Path:
-    """Cria `.spyproject` no repositório aberto, se ainda não existir."""
+    """Create `.spyproject` in the opened repository, if it is not there yet."""
     spyproject = root / ".spyproject"
     if spyproject.is_dir():
-        log_ok(f".spyproject já existe: {spyproject}")
+        log_ok(f".spyproject already exists: {spyproject}")
         return spyproject
 
-    log(f"Criando .spyproject em {root}")
+    log(f"Creating .spyproject in {root}")
     (spyproject / "config").mkdir(parents=True, exist_ok=True)
     from spyder.plugins.projects.api import EmptyProject
 
@@ -165,11 +165,11 @@ def ensure_spyproject(root: Path) -> Path:
         path.relative_to(root) for path in spyproject.rglob("*") if path.is_file()
     )
     if files:
-        log_ok(f".spyproject pronto ({len(files)} arquivo(s)):")
+        log_ok(f".spyproject ready ({len(files)} file(s)):")
         for relative in files:
-            log_kv("arquivo", relative)
+            log_kv("file", relative)
     else:
-        log_warn(".spyproject criado, mas nenhum arquivo de config apareceu")
+        log_warn(".spyproject created, but no config file showed up")
     return spyproject
 
 
@@ -182,9 +182,9 @@ def apply_spyder_config(
     if font_family is None:
         font_family, _ = resolve_editor_font()
 
-    log(f"Aplicando fonte {font_family!r}")
+    log(f"Applying font {font_family!r}")
     CONF.set("appearance", "font/family", [font_family])
-    log("Ligando wrap lines no editor (editor.wrap = True)")
+    log("Turning on wrap lines in the editor (editor.wrap = True)")
     CONF.set("editor", "wrap", True)
 
     font = CONF.get("appearance", "font/family")
@@ -199,9 +199,9 @@ def launch(
     keep_config: bool = False,
     workdir: str | Path | None = None,
 ) -> int:
-    """Configura o Spyder 5.x, cria `.spyproject` no repositório e abre a IDE.
+    """Configure Spyder 5.x, create `.spyproject` in the repository and open the IDE.
 
-    Em outro repositório::
+    From another repository::
 
         from setup_spyder import launch
         launch()
@@ -218,59 +218,59 @@ def launch(
         import spyder
         import spyder_kernels
     except ImportError as exc:
-        log_error(f"dependência ausente ({exc}).")
-        log("No outro repositório, adicione este pacote:")
-        log_kv("instalar", f"uv add git+{REPO_URL}")
-        log("Ou rode sem instalar no projeto:")
+        log_error(f"missing dependency ({exc}).")
+        log("In the other repository, add this package:")
+        log_kv("install", f"uv add git+{REPO_URL}")
+        log("Or run it without installing into the project:")
         log_kv("oneshot", f"uvx --from git+{REPO_URL} setup-spyder")
         return 1
 
     log_ok(f"Spyder {spyder.__version__}  ·  spyder-kernels {spyder_kernels.__version__}")
     if not spyder.__version__.startswith("5."):
-        log_warn(f"esperado Spyder 5.x, veio {spyder.__version__}")
+        log_warn(f"expected Spyder 5.x, got {spyder.__version__}")
 
     try:
         import pandas as pd
     except ImportError:
-        log_warn("pandas não instalado neste ambiente")
+        log_warn("pandas is not installed in this environment")
     else:
         log_ok(f"pandas {pd.__version__}")
 
     font_family, fonts = resolve_editor_font()
     if fonts:
-        log_ok(f"Fonte {font_family} encontrada ({len(fonts)} arquivo(s))")
+        log_ok(f"Font {font_family} found ({len(fonts)} file(s))")
         for path in fonts[:8]:
-            log_kv("arquivo", path)
+            log_kv("file", path)
         if len(fonts) > 8:
-            log_kv("...", f"mais {len(fonts) - 8} arquivo(s)")
+            log_kv("...", f"{len(fonts) - 8} more file(s)")
 
     spyproject = ensure_spyproject(workdir)
 
     conf_dir = Path(tempfile.mkdtemp(prefix="setup-spyder-conf-"))
-    log(f"Config isolada em: {conf_dir}")
-    log("(não mexe no ~/.spyder-py3 do usuário)")
+    log(f"Isolated config at: {conf_dir}")
+    log("(the user's ~/.spyder-py3 is left untouched)")
 
     try:
         font, wrap = apply_spyder_config(conf_dir, font_family=font_family)
-        log_ok("Config gravada. Conferindo valores:")
+        log_ok("Config written. Checking the values:")
         log_kv("appearance.font/family", font)
         log_kv("editor.wrap", wrap)
 
         ini_path = conf_dir / "config" / "spyder.ini"
         if ini_path.is_file():
-            log(f"Arquivo de config: {ini_path}")
-            log_kv("tamanho", f"{ini_path.stat().st_size} bytes")
+            log(f"Config file: {ini_path}")
+            log_kv("size", f"{ini_path.stat().st_size} bytes")
         else:
-            log_warn(f"esperado {ini_path}, mas o arquivo ainda não existe")
+            log_warn(f"expected {ini_path}, but the file does not exist yet")
 
         if no_launch:
-            log_ok("no_launch=True: setup concluído sem abrir o Spyder.")
-            log(f"Projeto Spyder permanece em {spyproject}")
+            log_ok("no_launch=True: setup finished without opening Spyder.")
+            log(f"The Spyder project stays at {spyproject}")
             return 0
 
         spyder_bin = shutil.which("spyder")
         if spyder_bin is None:
-            log_error("executável 'spyder' não está no PATH deste ambiente.")
+            log_error("the 'spyder' executable is not on this environment's PATH.")
             return 1
 
         cmd = [
@@ -284,53 +284,53 @@ def launch(
             str(workdir),
             *extra_args,
         ]
-        log_ok("Abrindo o Spyder agora...")
-        log_kv("comando", " ".join(cmd))
-        log("Feche a janela do Spyder para encerrar (e apagar a config isolada).")
+        log_ok("Opening Spyder now...")
+        log_kv("command", " ".join(cmd))
+        log("Close the Spyder window to finish (and delete the isolated config).")
         completed = subprocess.run(cmd, check=False)
         if completed.returncode == 0:
-            log_ok(f"Spyder encerrou com código {completed.returncode}")
+            log_ok(f"Spyder exited with code {completed.returncode}")
         else:
-            log_warn(f"Spyder encerrou com código {completed.returncode}")
+            log_warn(f"Spyder exited with code {completed.returncode}")
         return completed.returncode
     finally:
         if keep_config:
-            log_warn(f"keep_config=True: mantendo {conf_dir}")
+            log_warn(f"keep_config=True: keeping {conf_dir}")
         else:
-            log(f"Removendo config isolada: {conf_dir}")
+            log(f"Removing isolated config: {conf_dir}")
             shutil.rmtree(conf_dir, ignore_errors=True)
-            log_ok("Cleanup concluído.")
+            log_ok("Cleanup done.")
 
 
 def parse_args(argv: Sequence[str] | None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         prog="setup-spyder",
         description=(
-            "Instala/usa Spyder 5.x num ambiente isolado, configura "
-            f"{FONT_FAMILY} + wrap lines e abre a IDE. "
-            "Cada passo é impresso no terminal."
+            "Install/use Spyder 5.x in an isolated environment, configure "
+            f"{FONT_FAMILY} + wrap lines and open the IDE. "
+            "Every step is printed to the terminal."
         ),
     )
     parser.add_argument(
         "--no-launch",
         action="store_true",
-        help="Só configura; não abre a janela do Spyder.",
+        help="Only configure; do not open the Spyder window.",
     )
     parser.add_argument(
         "--keep-config",
         action="store_true",
-        help="Não apaga o diretório de config isolado ao sair.",
+        help="Do not delete the isolated config directory on exit.",
     )
     parser.add_argument(
         "-w",
         "--workdir",
         default=None,
-        help="Diretório de trabalho do Spyder (padrão: diretório atual).",
+        help="Spyder working directory (default: current directory).",
     )
     parser.add_argument(
         "spyder_args",
         nargs=argparse.REMAINDER,
-        help="Argumentos extras passados ao Spyder (depois de --).",
+        help="Extra arguments forwarded to Spyder (after --).",
     )
     return parser.parse_args(argv)
 

@@ -26,5 +26,7 @@ jobs:
           python-version: "3.11"
       - name: Build wheel and sdist
         run: uv build
+      - name: Validate package metadata
+        run: uvx twine check --strict dist/*
       - name: Show artifacts
         run: ls -lh dist
