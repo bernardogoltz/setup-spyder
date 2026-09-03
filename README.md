@@ -58,3 +58,12 @@ Without adding it to the project:
 uvx --from git+https://github.com/bernardogoltz/setup-spyder setup-spyder
 ```
 
+## Tests
+
+Unit tests run on every push/PR, and again before publishing to PyPI.
+
+```shell
+uv sync
+uv run pytest -v
+```
+

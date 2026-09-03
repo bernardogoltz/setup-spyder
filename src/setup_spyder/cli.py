@@ -44,9 +44,9 @@ def ensure_spyproject(root: Path) -> Path:
     spyproject = root / ".spyproject"
     if spyproject.is_dir():
         log(f".spyproject já existe: {spyproject}")
-    else:
-        log(f"Criando .spyproject em {root}")
+        return spyproject
 
+    log(f"Criando .spyproject em {root}")
     (spyproject / "config").mkdir(parents=True, exist_ok=True)
     from spyder.plugins.projects.api import EmptyProject
 

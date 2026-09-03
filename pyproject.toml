@@ -16,6 +16,15 @@ Repository = "https://github.com/bernardogoltz/setup-spyder"
 [project.scripts]
 setup-spyder = "setup_spyder.cli:main"
 
+[dependency-groups]
+dev = [
+    "pytest>=8",
+]
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"

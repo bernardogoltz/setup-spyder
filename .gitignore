@@ -11,3 +11,6 @@ wheels/
 
 # Spyder project (criado ao abrir o launcher)
 .spyproject/
+
+# Tests
+.pytest_cache/
