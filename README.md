@@ -1,7 +1,7 @@
 # setup-spyder
 Run [Spyder-IDE](https://www.spyder-ide.org/) @ version 5.6 (great tool for Exploratory Data Analysis) within a isolated Virtual-Environment using [uv](https://docs.astral.sh/uv/) package 
 manager. 
-Runs on Python 3.9 → 3.14.
+Runs on Python 3.9 → 3.14, on **macOS, Windows and Linux**.
 
 ## __quick launch__ `[tl;dr]`
 
@@ -15,7 +15,10 @@ setup-spyder
 ### with [uv](https://docs.astral.sh/uv/)
 
 ```shell
-curl -LsSf https://astral.sh/uv/install.sh | sh
+curl -LsSf https://astral.sh/uv/install.sh | sh          # macOS / Linux
+```
+```powershell
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"   # Windows
 ```
 ```
 uvx --from setup-spyder setup-spyder
@@ -39,6 +42,28 @@ of what Spyder hides by itself (`.git`, `__pycache__`, `.pytest_cache`, ...).
 setup-spyder --hide notes.txt,scratch   # hide more
 setup-spyder --show .github             # bring a default back
 ```
+### Windows
+
+Same commands, in PowerShell or `cmd`:
+
+```powershell
+uv run setup-spyder
+```
+
+What is platform-specific is handled for you:
+
+| Piece | macOS / Linux | Windows |
+| --- | --- | --- |
+| JetBrains Mono lookup | `~/Library/Fonts`, `/usr/share/fonts`, ... | `%LOCALAPPDATA%\Microsoft\Windows\Fonts`, `%WINDIR%\Fonts` |
+| Font fallback | Spyder's default (Menlo, DejaVu Sans Mono) | Spyder's default (Consolas) |
+| Console glyphs | UTF-8 already | stdout/stderr switched to UTF-8, so `✓` does not crash a cp1252 console |
+| Isolated config cleanup | `shutil.rmtree` | retries after clearing the read-only bit on cached files |
+| Repo shortcut script | `./run-spyder5.sh` | `run-spyder5.cmd` |
+
+The `.spyproject`, the isolated config directory and the Project pane filter
+work the same way on all three platforms; `~/.spyder-py3` (`%APPDATA%` on
+Windows) is never touched.
+
 ## __Actually readable section:__
 ## Why this repository exists?
 - Spyder could be considered the best IDE/Tool for either doing EDA and teaching Python, Data Science, Analytics and more due to it's Variable Explorer, Interactive IPython Console and Graphics Engine for  Data Visualization. 
@@ -53,6 +78,14 @@ setup-spyder --show .github             # bring a default back
 % source .venv/bin/activate
 % which python
 > setup-data-analytics/.venv/bin/python
+```
+
+On Windows the same venv lives in `.venv\Scripts\`:
+
+```powershell
+> .venv\Scripts\activate
+> where python
+setup-data-analytics\.venv\Scripts\python.exe
 ```
 
 ## Use in another repository

@@ -87,6 +87,11 @@ def test_run_integration_requires_uv(monkeypatch: pytest.MonkeyPatch) -> None:
     assert integration.run_integration() == 1
 
 
+def test_uv_install_hints_cover_both_platforms() -> None:
+    assert "install.ps1" in integration.UV_INSTALL_WINDOWS
+    assert "install.sh" in integration.UV_INSTALL_POSIX
+
+
 @pytest.fixture()
 def fake_repo(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     root = tmp_path / "repo"

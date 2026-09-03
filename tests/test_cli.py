@@ -29,6 +29,83 @@ def test_parse_args_keeps_spyder_remainder() -> None:
     assert args.spyder_args == ["--", "script.py"]
 
 
+def test_font_dirs_on_windows_look_at_the_two_font_folders(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(cli.sys, "platform", "win32")
+    monkeypatch.setenv("LOCALAPPDATA", r"C:\Users\ana\AppData\Local")
+    monkeypatch.setenv("WINDIR", r"C:\Windows")
+
+    dirs = cli.font_dirs()
+
+    assert [d.name for d in dirs] == ["Fonts", "Fonts"]
+    assert "AppData" in str(dirs[0])
+    assert str(dirs[1]).endswith("Fonts")
+
+
+def test_font_dirs_on_macos_look_at_the_library_folders(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(cli.sys, "platform", "darwin")
+    assert Path("/Library/Fonts") in cli.font_dirs()
+
+
+def test_font_dirs_on_linux_look_at_share_fonts(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(cli.sys, "platform", "linux")
+    assert Path("/usr/share/fonts") in cli.font_dirs()
+
+
+def test_remove_tree_deletes_read_only_files(tmp_path: Path) -> None:
+    tree = tmp_path / "conf"
+    (tree / "config").mkdir(parents=True)
+    locked = tree / "config" / "spyder.ini"
+    locked.write_text("[appearance]\n")
+    locked.chmod(0o444)
+
+    cli.remove_tree(tree)
+
+    assert not tree.exists()
+
+
+def test_write_launcher_is_utf8(tmp_path: Path) -> None:
+    launcher = cli.write_launcher(tmp_path, ["spyder", "-w", str(tmp_path)], [".venv"])
+    assert "do not edit by hand" in launcher.read_text(encoding="utf-8")
+
+
+def test_enable_utf8_output_reconfigures_a_legacy_console(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[dict[str, str]] = []
+
+    class FakeStream:
+        encoding = "cp1252"
+
+        def reconfigure(self, **kwargs: str) -> None:
+            calls.append(kwargs)
+
+    monkeypatch.setattr(cli.sys, "stdout", FakeStream())
+    monkeypatch.setattr(cli.sys, "stderr", FakeStream())
+
+    cli.enable_utf8_output()
+
+    assert calls == [{"encoding": "utf-8", "errors": "replace"}] * 2
+
+
+def test_enable_utf8_output_leaves_a_utf8_console_alone(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class FakeStream:
+        encoding = "UTF-8"
+
+        def reconfigure(self, **kwargs: str) -> None:
+            raise AssertionError("must not reconfigure a UTF-8 stream")
+
+    monkeypatch.setattr(cli.sys, "stdout", FakeStream())
+    monkeypatch.setattr(cli.sys, "stderr", FakeStream())
+
+    cli.enable_utf8_output()
+
+
 def test_jetbrains_mono_found(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     font = tmp_path / "JetBrainsMono-Regular.ttf"
     font.write_bytes(b"")

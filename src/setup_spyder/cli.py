@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import os
 import shutil
+import stat
 import subprocess
 import sys
 import tempfile
@@ -18,14 +19,10 @@ from rich.table import Table
 from rich.text import Text
 
 FONT_FAMILY = "JetBrains Mono"
-FONT_DIRS = (
-    Path.home() / "Library" / "Fonts",
-    Path("/Library/Fonts"),
-    Path.home() / ".local" / "share" / "fonts",
-    Path("/usr/share/fonts"),
-)
 REPO_URL = "https://github.com/bernardogoltz/setup-spyder"
 AUTHOR = "@bernardogoltz"
+
+WINDOWS = sys.platform == "win32"
 
 #: Names hidden from Spyder's Project pane, on top of the ones Spyder already
 #: hides itself (``.spyproject``, ``__pycache__``, ``.git``, ``.pytest_cache``,
@@ -61,6 +58,8 @@ HIDDEN_PATHS = (
     ".pre-commit-config.yaml",
     "uv.lock",
     "poetry.lock",
+    # Windows folder settings, the one bit of OS clutter Spyder does not hide
+    "desktop.ini",
 )
 
 #: Spyder starts the IDE in-process, so the Project pane filter has to be
@@ -104,6 +103,68 @@ from spyder.app.start import main
 
 sys.exit(main())
 '''
+
+
+def font_dirs() -> tuple[Path, ...]:
+    """Directories the current platform installs fonts into (user first)."""
+    if sys.platform == "win32":
+        local = os.environ.get("LOCALAPPDATA") or Path.home() / "AppData" / "Local"
+        windir = os.environ.get("WINDIR") or r"C:\Windows"
+        return (
+            Path(local) / "Microsoft" / "Windows" / "Fonts",
+            Path(windir) / "Fonts",
+        )
+    if sys.platform == "darwin":
+        return (
+            Path.home() / "Library" / "Fonts",
+            Path("/Library/Fonts"),
+            Path("/System/Library/Fonts"),
+        )
+    return (
+        Path.home() / ".local" / "share" / "fonts",
+        Path("/usr/local/share/fonts"),
+        Path("/usr/share/fonts"),
+    )
+
+
+def force_writable(path: Path) -> None:
+    """Clear the read-only bit Windows leaves on hardlinked cache files."""
+    try:
+        path.chmod(path.stat().st_mode | stat.S_IWRITE)
+    except OSError:  # pragma: no cover - the file is about to be deleted anyway
+        pass
+
+
+def remove_tree(path: Path) -> None:
+    """Delete a directory tree, retrying past files Windows marks read-only."""
+    shutil.rmtree(path, ignore_errors=True)
+    if not path.is_dir():
+        return
+    for item in path.rglob("*"):
+        force_writable(item)
+    force_writable(path)
+    shutil.rmtree(path, ignore_errors=True)
+
+
+def enable_utf8_output() -> None:
+    """Let the Windows console print the ✓/◆ glyphs instead of crashing on cp1252."""
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if reconfigure is None:
+            continue
+        encoding = (getattr(stream, "encoding", "") or "").lower()
+        if encoding.replace("-", "") == "utf8":
+            continue
+        try:
+            reconfigure(encoding="utf-8", errors="replace")
+        except (OSError, ValueError):  # pragma: no cover - depends on the console
+            pass
+
+
+FONT_DIRS = font_dirs()
+
+if WINDOWS:
+    enable_utf8_output()
 
 console = Console(highlight=False)
 
@@ -295,7 +356,8 @@ def write_launcher(conf_dir: Path, argv: Sequence[str], hidden: Sequence[str]) -
     """Write the launcher that patches the Project pane filter and starts Spyder."""
     launcher = conf_dir / "launch_spyder.py"
     launcher.write_text(
-        LAUNCHER_TEMPLATE.format(argv=list(argv), hidden=list(hidden))
+        LAUNCHER_TEMPLATE.format(argv=list(argv), hidden=list(hidden)),
+        encoding="utf-8",
     )
     return launcher
 
@@ -410,7 +472,7 @@ def launch(
             log_warn(f"keep_config=True: keeping {conf_dir}")
         else:
             log(f"Removing isolated config: {conf_dir}")
-            shutil.rmtree(conf_dir, ignore_errors=True)
+            remove_tree(conf_dir)
             log_ok("Cleanup done.")
 
 
