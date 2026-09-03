@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import ast
+import sys
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import MagicMock
@@ -111,31 +113,77 @@ def test_launch_no_launch_creates_project_and_skips_gui(
     run.assert_not_called()
 
 
+def capture_launcher(
+    monkeypatch: pytest.MonkeyPatch, which: str | None = "/opt/spyder"
+) -> dict[str, object]:
+    """Run Spyder into a mock, keeping the generated launcher before cleanup."""
+    captured: dict[str, object] = {}
+
+    def fake_run(cmd, **kwargs):
+        source = Path(cmd[1]).read_text()
+        captured["cmd"] = cmd
+        captured["source"] = source
+        line = next(
+            ln for ln in source.splitlines() if ln.startswith("sys.argv = ")
+        )
+        captured["argv"] = ast.literal_eval(line.removeprefix("sys.argv = "))
+        return SimpleNamespace(returncode=0)
+
+    monkeypatch.setattr(cli.subprocess, "run", fake_run)
+    monkeypatch.setattr(cli.shutil, "which", lambda _: which)
+    return captured
+
+
 def test_launch_opens_spyder_with_project_flags(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    run = MagicMock(return_value=SimpleNamespace(returncode=0))
-    monkeypatch.setattr(cli.subprocess, "run", run)
-    monkeypatch.setattr(cli.shutil, "which", lambda _: "/opt/spyder")
+    captured = capture_launcher(monkeypatch)
 
     code = launch(spyder_args=["notebook.py"], workdir=tmp_path)
 
     assert code == 0
-    cmd = run.call_args.args[0]
-    assert cmd[0] == "/opt/spyder"
-    assert "--new-instance" in cmd
-    assert cmd[cmd.index("-w") + 1] == str(tmp_path.resolve())
-    assert cmd[cmd.index("-p") + 1] == str(tmp_path.resolve())
-    assert "--conf-dir" in cmd
-    assert "notebook.py" in cmd
+    assert captured["cmd"][0] == sys.executable
+    argv = captured["argv"]
+    assert argv[0] == "/opt/spyder"
+    assert "--new-instance" in argv
+    assert argv[argv.index("-w") + 1] == str(tmp_path.resolve())
+    assert argv[argv.index("-p") + 1] == str(tmp_path.resolve())
+    assert "--conf-dir" in argv
+    assert "notebook.py" in argv
 
 
-def test_launch_missing_spyder_binary(
+def test_launch_without_spyder_binary_on_path(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setattr(cli.shutil, "which", lambda _: None)
-    code = launch(workdir=tmp_path)
-    assert code == 1
+    """The console script is only argv[0]; the launcher runs on sys.executable."""
+    captured = capture_launcher(monkeypatch, which=None)
+
+    assert launch(workdir=tmp_path) == 0
+    assert captured["argv"][0] == "spyder"
+
+
+def test_launch_hides_clutter_from_project_pane(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    captured = capture_launcher(monkeypatch)
+
+    launch(workdir=tmp_path, hide=[".secrets,notes.txt"], show=[".github"])
+
+    line = next(
+        ln
+        for ln in str(captured["source"]).splitlines()
+        if ln.startswith("HIDDEN = ")
+    )
+    hidden = ast.literal_eval(line.removeprefix("HIDDEN = "))
+    assert {".venv", "dist", "uv.lock", ".secrets", "notes.txt"} <= set(hidden)
+    assert ".github" not in hidden
+
+
+def test_resolve_hidden_paths_defaults_plus_hide_minus_show() -> None:
+    hidden = cli.resolve_hidden_paths(hide=["a, b", "c"], show=[".venv"])
+    assert {"a", "b", "c"} <= set(hidden)
+    assert ".venv" not in hidden
+    assert hidden == sorted(hidden)
 
 
 def test_launch_deletes_isolated_config(
