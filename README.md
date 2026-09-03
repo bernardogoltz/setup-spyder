@@ -1,9 +1,19 @@
 # setup-spyder
 Run [Spyder-IDE](https://www.spyder-ide.org/) @ version 5.6 (great tool for Exploratory Data Analysis) within a isolated Virtual-Environment using [uv](https://docs.astral.sh/uv/) package 
 manager. 
+Runs on Python 3.9 → 3.14.
+
 ## __quick launch__ `[tl;dr]`
-### System requirements
-#### Requires [uv](https://docs.astral.sh/uv/)
+
+### with pip
+
+```shell
+pip install setup-spyder
+setup-spyder
+```
+
+### with [uv](https://docs.astral.sh/uv/)
+
 ```shell
 curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
@@ -17,6 +27,17 @@ uv add setup-spyder
 
 ```shell
 uv run setup-spyder
+```
+
+### A clean Project pane
+
+Spyder's Project pane only shows what you actually work on. `.venv`, `dist`,
+`uv.lock`, `.github`, `.python-version` and ~20 other names are hidden, on top
+of what Spyder hides by itself (`.git`, `__pycache__`, `.pytest_cache`, ...).
+
+```shell
+setup-spyder --hide notes.txt,scratch   # hide more
+setup-spyder --show .github             # bring a default back
 ```
 ## __Actually readable section:__
 ## Why this repository exists?
@@ -148,3 +169,4 @@ To cut a release:
    rendered page plus a clean install.
 3. Tag and publish a GitHub release named `v<version>`. The workflow refuses to
    build if the tag and `__version__` disagree, then publishes to PyPI.
+

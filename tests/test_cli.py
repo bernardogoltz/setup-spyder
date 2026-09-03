@@ -14,7 +14,7 @@ from setup_spyder import cli
 
 def test_public_api_aliases() -> None:
     assert open_spyder is launch
-    assert __version__ == "0.1.0"
+    assert __version__ == "0.2.0"
 
 
 def test_parse_args_no_launch_and_workdir() -> None:
