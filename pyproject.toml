@@ -16,6 +16,7 @@ Repository = "https://github.com/bernardogoltz/setup-spyder"
 
 [project.scripts]
 setup-spyder = "setup_spyder.cli:main"
+integration = "setup_spyder.integration:main"
 
 [dependency-groups]
 dev = [

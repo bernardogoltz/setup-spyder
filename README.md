@@ -58,6 +58,45 @@ Without adding it to the project:
 uvx --from git+https://github.com/bernardogoltz/setup-spyder setup-spyder
 ```
 
+## Integration routine
+
+One command to answer one question: **does this package actually work when
+someone installs it from GitHub?**
+
+```shell
+uv run integration
+```
+
+That builds a throwaway project in `tests/fixture_integration/` and, inside it:
+
+1. installs `setup-spyder` straight from GitHub (`uv add git+...`),
+2. checks that `import setup_spyder` works,
+3. runs `uv run setup-spyder`, opening Spyder on that project.
+
+Nothing there imports `src/` — it is a real outside consumer, same as any other
+repository would be.
+
+### Flags
+
+| Flag | What changes |
+| --- | --- |
+| `--no-launch` | Stops after the install and the import check; no Spyder window. |
+| `--local` | Installs the local working tree instead of GitHub — use it to test changes you have not pushed yet. |
+| `--ref develop` | Installs from another branch, tag or commit. |
+| `--fresh` | Deletes the throwaway project first and rebuilds it from scratch. |
+
+Anything after `--` goes to `setup-spyder`:
+
+```shell
+uv run integration --fresh -- main.py
+```
+
+### Generated files
+
+The routine writes the fixture's `pyproject.toml`, `uv.lock`, `main.py`,
+`.venv/` and `.spyproject/`. All of them are gitignored — only the fixture's
+`README.md` is versioned, so `--fresh` is always safe.
+
 ## Tests
 
 Unit tests run on every push/PR, and again before publishing to PyPI.
