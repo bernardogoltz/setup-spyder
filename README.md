@@ -1,5 +1,7 @@
 # setup-spyder
 
+![setup-spyder](examples/setup-spyder.gif)
+
 Open the [bernardogoltz/spyder](https://github.com/bernardogoltz/spyder) fork
 (Spyder 5.x, a great tool for exploratory data analysis) inside the `.venv` of
 any [uv](https://docs.astral.sh/uv/) project. Two commands, same package:
