@@ -199,13 +199,17 @@ def test_launch_opens_spyder_with_project_flags(
 
     assert code == 0
     cmd = captured["cmd"]
-    assert cmd[:3] == [sys.executable, "-m", "setup_spyder.bootstrap"]
+    assert cmd[:3] == [sys.executable, "-m", "spyder.app.start"]
     assert cmd[cmd.index("-w") + 1] == str(tmp_path.resolve())
     assert cmd[cmd.index("-p") + 1] == str(tmp_path.resolve())
-    assert cmd[cmd.index("--conf-dir") + 1] == str(tmp_path.resolve() / perfil.CONF_DIRNAME)
+    assert captured["env"]["SPYDER_CONFDIR"] == str(
+        tmp_path.resolve() / perfil.CONF_DIRNAME
+    )
+    assert "--conf-dir" not in cmd
     assert "--new-instance" not in cmd, "project profile respects single instance"
     assert cmd[-1] == "notebook.py"
     assert "--seed-only" not in cmd
+    assert "SETUP_SPYDER_FORK" not in captured["env"]
 
 
 def test_launch_ephemeral_forces_a_new_instance(

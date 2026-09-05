@@ -35,12 +35,12 @@ def _opt_in(e2e_enabled, spyder_available):
 
 @pytest.fixture()
 def spyder(isolated_home, project_root):
-    """Sobe o `setup-spyder`, entrega o processo e garante o encerramento."""
+    """Sobe o `setup-spyder-fork`, entrega o processo e garante o encerramento."""
     processos = []
 
     def subir(*argv, timeout=ESPERA_JANELA):
         processo = subprocess.Popen(
-            [sys.executable, "-m", "setup_spyder", "-w", str(project_root), *argv],
+            [sys.executable, "-m", "setup_spyder.fork", "-w", str(project_root), *argv],
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             encoding="utf-8",

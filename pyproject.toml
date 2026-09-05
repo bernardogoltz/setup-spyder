@@ -55,6 +55,7 @@ Spyder = "https://github.com/bernardogoltz/spyder"
 
 [project.scripts]
 setup-spyder = "setup_spyder.cli:main"
+setup-spyder-fork = "setup_spyder.fork:main"
 setup-spyder-integration = "setup_spyder.integration:main"
 
 [project.entry-points."spyder.plugins"]

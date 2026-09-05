@@ -184,3 +184,43 @@ def test_importar_o_plugin_nao_importa_o_backend_de_pty(plugin_class):
     assert saida.stdout.strip().endswith("[]"), (
         f"backend de PTY importado cedo demais: {saida.stdout.strip()}"
     )
+
+
+# Frente nativa vs fork: o painel so carrega na instancia -----------------
+
+
+@pytest.mark.phase3
+def test_a_instancia_do_fork_fica_desligada_sem_a_env(monkeypatch):
+    from setup_spyder.plugin.api import fork_instance_enabled
+
+    monkeypatch.delenv("SETUP_SPYDER_FORK", raising=False)
+    assert fork_instance_enabled() is False
+    monkeypatch.setenv("SETUP_SPYDER_FORK", "0")
+    assert fork_instance_enabled() is False
+
+
+@pytest.mark.phase3
+@pytest.mark.parametrize("valor", ["1", "true", "YES", "on"])
+def test_a_instancia_do_fork_liga_com_a_env(monkeypatch, valor):
+    from setup_spyder.plugin.api import fork_instance_enabled
+
+    monkeypatch.setenv("SETUP_SPYDER_FORK", valor)
+    assert fork_instance_enabled() is True
+
+
+@pytest.mark.phase3
+def test_check_compatibility_recusa_sem_a_env_do_fork(plugin_class, monkeypatch):
+    monkeypatch.delenv("SETUP_SPYDER_FORK", raising=False)
+    plugin = plugin_class.__new__(plugin_class)
+    valid, message = plugin.check_compatibility()
+    assert valid is False
+    assert "setup-spyder-fork" in message
+
+
+@pytest.mark.phase3
+def test_check_compatibility_aceita_com_a_env_do_fork(plugin_class, monkeypatch):
+    monkeypatch.setenv("SETUP_SPYDER_FORK", "1")
+    plugin = plugin_class.__new__(plugin_class)
+    valid, message = plugin.check_compatibility()
+    assert valid is True
+    assert message == ""

@@ -26,6 +26,7 @@ SONDA = """
 import json, sys
 import setup_spyder
 import setup_spyder.cli
+import setup_spyder.fork
 print(json.dumps(sorted(m for m in sys.modules if m.startswith("spyder"))))
 """
 
@@ -64,7 +65,7 @@ def test_importar_setup_spyder_nao_carrega_a_config_do_spyder(
 def test_importar_setup_spyder_nao_carrega_qt(isolated_home):
     """Importar o pacote nao pode custar um QApplication."""
     codigo = (
-        "import sys, setup_spyder, setup_spyder.cli;"
+        "import sys, setup_spyder, setup_spyder.cli, setup_spyder.fork;"
         "print([m for m in ('PyQt5', 'PyQt6', 'PySide6', 'qtpy')"
         " if m in sys.modules])"
     )
@@ -85,9 +86,13 @@ def test_importar_setup_spyder_nao_carrega_qt(isolated_home):
 def test_a_ajuda_da_cli_nao_importa_o_spyder(isolated_home):
     """`setup-spyder --help` tem de responder rapido, sem subir o mundo."""
     codigo = (
-        "import sys, setup_spyder.cli as cli\n"
+        "import sys, setup_spyder.cli as cli, setup_spyder.fork as fork\n"
         "try:\n"
         "    cli.parse_args(['--help'])\n"
+        "except SystemExit:\n"
+        "    pass\n"
+        "try:\n"
+        "    fork.parse_args(['--help'])\n"
         "except SystemExit:\n"
         "    pass\n"
         "print('SPYDER_IMPORTADO' if any("

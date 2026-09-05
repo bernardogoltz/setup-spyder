@@ -2,12 +2,21 @@
 
 from __future__ import annotations
 
+import os
+
 PLUGIN_NAME = "setup_spyder_ai"
 
-# Environment variables set by the ``setup-spyder`` launcher (plan section 5.2).
+# Environment variables set by the ``setup-spyder-fork`` launcher (plan section 5.2).
 ENV_AGENT = "SETUP_SPYDER_AGENT"
 ENV_WORKDIR = "SETUP_SPYDER_WORKDIR"
 ENV_AUTOSTART = "SETUP_SPYDER_AUTOSTART"
+ENV_FORK = "SETUP_SPYDER_FORK"
+
+
+def fork_instance_enabled() -> bool:
+    """True when this process was started by ``setup-spyder-fork``."""
+    value = os.environ.get(ENV_FORK, "")
+    return value.strip().lower() in {"1", "true", "yes", "on"}
 
 
 class AITerminalActions:

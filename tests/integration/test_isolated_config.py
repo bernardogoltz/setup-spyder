@@ -16,7 +16,7 @@ from pathlib import Path
 
 import pytest
 
-from helpers.pending import child_env, not_implemented
+from helpers.pending import child_env
 
 pytestmark = [pytest.mark.integration, pytest.mark.slow]
 
@@ -28,9 +28,9 @@ def global_conf_created(home) -> list:
     return [name for name in GLOBAL_CONF_DIRNAMES if (home / name).exists()]
 
 
-def rodar(argv, *, home, cwd=None, timeout=600):
+def rodar(argv, *, home, cwd=None, timeout=600, module="setup_spyder"):
     return subprocess.run(
-        [sys.executable, "-m", "setup_spyder", *argv],
+        [sys.executable, "-m", module, *argv],
         capture_output=True,
         encoding="utf-8",
         errors="replace",
@@ -38,6 +38,10 @@ def rodar(argv, *, home, cwd=None, timeout=600):
         cwd=str(cwd) if cwd else None,
         timeout=timeout,
     )
+
+
+def rodar_fork(argv, **kwargs):
+    return rodar(argv, module="setup_spyder.fork", **kwargs)
 
 
 @pytest.fixture(autouse=True)
@@ -79,7 +83,7 @@ def test_ephemeral_nao_escreve_no_projeto(isolated_home, project_root):
     """Secao 5.1: o perfil efemero vive num diretorio temporario exclusivo."""
     from setup_spyder.perfil import CONF_DIRNAME
 
-    resultado = rodar(
+    resultado = rodar_fork(
         ["--no-launch", "--ephemeral", "-w", str(project_root)], home=isolated_home
     )
     assert resultado.returncode == 0, resultado.stdout + resultado.stderr
@@ -92,7 +96,7 @@ def test_conf_dir_explicito_tem_precedencia(isolated_home, project_root, tmp_pat
     from setup_spyder.perfil import CONF_DIRNAME
 
     escolhido = tmp_path / "perfil escolhido"
-    resultado = rodar(
+    resultado = rodar_fork(
         ["--no-launch", "--conf-dir", str(escolhido), "-w", str(project_root)],
         home=isolated_home,
     )
@@ -135,10 +139,8 @@ def test_funciona_com_espaco_e_acento_no_caminho(isolated_home, awkward_project_
 
 def _rodar_perfil_projeto(home, project_root):
     resultado = rodar(
-        ["--no-launch", "--profile", "project", "-w", str(project_root)], home=home
+        ["--no-launch", "-w", str(project_root)], home=home
     )
-    if resultado.returncode != 0 and "--profile" in resultado.stderr:
-        not_implemented("--profile project (Fase 2)")
     return resultado
 
 
@@ -189,7 +191,7 @@ def test_reset_profile_recria_o_perfil_de_projeto(isolated_home, project_root):
     lixo.write_text("apague-me", encoding="utf-8")
 
     resultado = rodar(
-        ["--no-launch", "--profile", "project", "--reset-profile", "-w",
+        ["--no-launch", "--reset-profile", "-w",
          str(project_root)],
         home=isolated_home,
     )
@@ -205,7 +207,7 @@ def test_reset_profile_recusa_conf_dir_arbitrario(isolated_home, project_root, t
     testemunha = escolhido / "config" / "importante.txt"
     testemunha.write_text("nao me apague", encoding="utf-8")
 
-    resultado = rodar(
+    resultado = rodar_fork(
         ["--no-launch", "--conf-dir", str(escolhido), "--reset-profile", "-w",
          str(project_root)],
         home=isolated_home,
@@ -219,14 +221,14 @@ def test_ephemeral_e_apagado_ao_sair_salvo_keep_config(isolated_home, project_ro
     import re
 
     padrao = re.compile(r"Profile \(ephemeral\): (.+)")
-    resultado = rodar(
+    resultado = rodar_fork(
         ["--no-launch", "--ephemeral", "-w", str(project_root)], home=isolated_home
     )
     caminho = padrao.search(resultado.stdout)
     assert caminho, resultado.stdout
     assert not Path(caminho.group(1).strip()).exists()
 
-    resultado = rodar(
+    resultado = rodar_fork(
         ["--no-launch", "--ephemeral", "--keep-config", "-w", str(project_root)],
         home=isolated_home,
     )

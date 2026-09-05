@@ -49,6 +49,11 @@ def build_child_command(launcher):
     return require_attr(launcher, "build_child_command")
 
 
+@pytest.fixture()
+def build_native_command(launcher):
+    return require_attr(launcher, "build_native_command")
+
+
 # Workdir ----------------------------------------------------------------
 
 
@@ -188,6 +193,11 @@ def test_o_filho_roda_o_bootstrap_do_pacote(child):
     assert command[1:3] == ["-m", "setup_spyder.bootstrap"]
 
 
+def test_o_filho_do_fork_marca_a_instancia(child):
+    _, env = child
+    assert env["SETUP_SPYDER_FORK"] == "1"
+
+
 def test_o_filho_recebe_conf_dir_workdir_e_projeto(child, tmp_path, project_root):
     command, _ = child
     assert command[command.index("--conf-dir") + 1] == str(tmp_path / "perfil")
@@ -247,6 +257,71 @@ def test_build_child_command_nao_toca_o_disco(build_child_command, tmp_path,
     build_child_command(
         conf_dir=conf_dir, workdir=project_root, agent="codex", autostart=True,
     )
+    assert not conf_dir.exists()
+
+
+# Frente nativa (`python -m spyder.app.start`) -------------------------------
+
+
+@pytest.fixture()
+def native(build_native_command, tmp_path, project_root):
+    command, env = build_native_command(
+        conf_dir=tmp_path / "perfil",
+        workdir=project_root,
+        spyder_args=["--debug-info", "verbose"],
+    )
+    return command, env
+
+
+def test_o_filho_nativo_usa_o_modulo_do_spyder(native):
+    command, _ = native
+    assert command[:3] == [sys.executable, "-m", "spyder.app.start"]
+
+
+def test_o_filho_nativo_nao_passa_pelo_bootstrap(native):
+    command, _ = native
+    assert "setup_spyder.bootstrap" not in command
+
+
+def test_o_filho_nativo_abre_o_projeto(native, tmp_path, project_root):
+    command, env = native
+    assert command[command.index("-w") + 1] == str(project_root)
+    assert command[command.index("-p") + 1] == str(project_root)
+    assert env["SPYDER_CONFDIR"] == str(tmp_path / "perfil")
+
+
+def test_o_filho_nativo_nao_carrega_o_contexto_do_fork(native):
+    _, env = native
+    assert "SETUP_SPYDER_FORK" not in env
+    assert "SETUP_SPYDER_AGENT" not in env
+    assert "SETUP_SPYDER_AUTOSTART" not in env
+    assert "SETUP_SPYDER_HIDDEN" not in env
+    assert "SETUP_SPYDER_WORKDIR" not in env
+
+
+def test_o_filho_nativo_repassa_argumentos_extras(native):
+    command, _ = native
+    assert command[-2:] == ["--debug-info", "verbose"]
+
+
+def test_seed_nativo_usa_o_bootstrap_sem_abrir_a_ide(
+    build_native_command, tmp_path, project_root
+):
+    command, env = build_native_command(
+        conf_dir=tmp_path / "perfil",
+        workdir=project_root,
+        seed_only=True,
+    )
+    assert command[1:3] == ["-m", "setup_spyder.bootstrap"]
+    assert "--seed-only" in command
+    assert "spyder.app.start" not in command
+    assert "SETUP_SPYDER_FORK" not in env
+
+
+def test_build_native_command_nao_toca_o_disco(build_native_command, tmp_path,
+                                               project_root):
+    conf_dir = tmp_path / "perfil-que-nao-existe"
+    build_native_command(conf_dir=conf_dir, workdir=project_root)
     assert not conf_dir.exists()
 
 

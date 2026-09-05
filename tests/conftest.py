@@ -71,6 +71,11 @@ def setup_spyder_cli():
 
 
 @pytest.fixture(scope="session")
+def setup_spyder_fork():
+    return importlib.import_module("setup_spyder.fork")
+
+
+@pytest.fixture(scope="session")
 def spyder_available() -> bool:
     return importlib.util.find_spec("spyder") is not None
 

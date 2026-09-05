@@ -30,6 +30,7 @@ from setup_spyder.plugin.api import (
     ENV_WORKDIR,
     PLUGIN_NAME,
     AITerminalActions,
+    fork_instance_enabled,
 )
 from setup_spyder.plugin.main_widget import AITerminalWidget
 from setup_spyder.plugin.preferences import AITerminalConfigPage
@@ -72,6 +73,11 @@ class AITerminalPlugin(SpyderDockablePlugin):
 
     def get_icon(self):
         return self.create_icon("ipython_console")
+
+    def check_compatibility(self):
+        if fork_instance_enabled():
+            return True, ""
+        return False, "Load the AI Terminal with setup-spyder-fork"
 
     def on_initialize(self):
         widget = self.get_widget()

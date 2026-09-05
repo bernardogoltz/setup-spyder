@@ -144,11 +144,13 @@ mínima que torna o comportamento verificável. Mudar a forma é legítimo — m
 o comportamento não.
 
 ```python
-# setup_spyder (API pública, congelada)
-launch(spyder_args=(), *, no_launch=False, keep_config=False, ephemeral=False,
-       sem_estilo=False, workdir=None, conf_dir=None, hide=(), show=(),
-       agent=None, profile=None, reset_profile=False) -> int
-main(argv=None) -> int
+# setup_spyder (API pública)
+launch(spyder_args=(), *, no_launch=False, sem_estilo=False, workdir=None,
+       reset_profile=False, keep_config=False, ephemeral=False, conf_dir=None,
+       hide=(), show=(), agent=None, profile=None) -> int
+       # nativo; kwargs do fork ainda delegam para launch_fork()
+launch_fork(...) -> int          # instância isolada + AI Terminal
+main(argv=None) -> int           # setup-spyder
 open_spyder is launch
 
 # setup_spyder.launcher (processo pai; nunca importa o Spyder)
@@ -156,11 +158,15 @@ resolve_workdir(workdir=None, cwd=None) -> Path
 resolve_profile(workdir, *, conf_dir=None, ephemeral=False, profile=None,
                 keep_config=False) -> Profile(kind, path, delete_at_exit)
 ensure_spyproject(root) -> Path                  # escreve .spyproject/config/*.ini
+build_native_command(*, conf_dir, workdir, spyder_args=(), sem_estilo=False,
+                     seed_only=False) -> tuple[list[str], dict[str, str]]
 build_child_command(*, conf_dir, workdir, agent, autostart, spyder_args=(),
                     profile="ephemeral", hidden=(), sem_estilo=False,
                     seed_only=False) -> tuple[list[str], dict[str, str]]
+launch_native(...) -> int        # python -m spyder.app.start
+launch(...) -> int               # python -m setup_spyder.bootstrap
 
-# setup_spyder.bootstrap (processo filho: python -m setup_spyder.bootstrap)
+# setup_spyder.bootstrap (filho do fork: python -m setup_spyder.bootstrap)
 split_bootstrap_argv(argv) -> (seed_only, conf_dir, spyder_argv)
 main(argv=None) -> int          # seed_profile -> filtro do painel -> spyder.app.start
 
@@ -173,7 +179,8 @@ seed_profile(conf_dir, *, version=SEED_VERSION, font_family=None,
 reset_profile(conf_dir, *, project_root=None) -> Path      # valida o caminho
 
 # variáveis que o pai entrega ao filho (e que o plugin lê)
-SPYDER_CONFDIR, SETUP_SPYDER_AGENT (auto|codex|claude|none),
+SPYDER_CONFDIR, SETUP_SPYDER_FORK (1 só no setup-spyder-fork),
+SETUP_SPYDER_AGENT (auto|codex|claude|none),
 SETUP_SPYDER_WORKDIR, SETUP_SPYDER_AUTOSTART (0|1),
 SETUP_SPYDER_HIDDEN (nomes separados por os.pathsep), SETUP_SPYDER_SEED_STYLE (0|1)
 
@@ -235,6 +242,7 @@ só para aquela pasta; os testes de lá provam o launcher sem Qt nem display.
 
 ## Intermitência conhecida em `tests/e2e`
 
+O e2e sobe `python -m setup_spyder.fork` (a instância com AI Terminal).
 Em rodadas em que várias instâncias do Spyder sobem e são mortas em sequência
 (o padrão do próprio harness), de vez em quando um teste falha com "o Spyder
 morreu na subida (código 0)": o `mainwindow.main()` retorna normalmente nos

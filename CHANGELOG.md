@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+### Added
+- Console script `setup-spyder-fork` for the isolated instance (AI Terminal,
+  agent, project-pane filter). The plugin only loads when that command sets
+  `SETUP_SPYDER_FORK=1`.
+- `launch_fork()` on the public API.
+
+### Changed
+- `uv run setup-spyder` (and `launch()` / `open_spyder`) opens Spyder as a
+  module (`python -m spyder.app.start`) with `.spyproject`, fonts and the
+  project profile. `--agent`, `--hide`/`--show`, `--ephemeral` and
+  `--conf-dir` moved to `setup-spyder-fork`. Passing those kwargs to
+  `launch()` still delegates to `launch_fork()` for one version, with a
+  warning.
+
 ### Fixed
 - CI was red on every job since 0.3.0. `tests/unit/test_profile.py` asserted
   that `~/.spyder-py3` still existed after `reset_profile` refused it, which

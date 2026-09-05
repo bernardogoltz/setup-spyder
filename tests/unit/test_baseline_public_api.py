@@ -33,11 +33,12 @@ pytestmark = [pytest.mark.unit, pytest.mark.phase0]
 
 
 def test_exporta_launch_main_e_open_spyder(setup_spyder):
-    for name in ("launch", "main", "open_spyder", "__version__"):
+    for name in ("launch", "launch_fork", "main", "open_spyder", "__version__"):
         assert hasattr(setup_spyder, name), f"setup_spyder.{name} sumiu"
     assert set(setup_spyder.__all__) >= {
         "__version__",
         "launch",
+        "launch_fork",
         "main",
         "open_spyder",
     }
@@ -105,7 +106,13 @@ def test_o_cli_delega_para_o_launcher(setup_spyder_cli):
     """Secao 9 (Fase 2): `cli.py` e `launcher.py` sao camadas separadas."""
     import setup_spyder.launcher as launcher
 
-    assert setup_spyder_cli._launch is launcher.launch
+    assert setup_spyder_cli._launch is launcher.launch_native
+
+
+def test_o_fork_delega_para_o_launcher(setup_spyder_fork):
+    import setup_spyder.launcher as launcher
+
+    assert setup_spyder_fork._launch is launcher.launch
 
 
 # Camadas do pacote ------------------------------------------------------
@@ -115,6 +122,7 @@ def test_o_cli_delega_para_o_launcher(setup_spyder_cli):
     "modulo, funcao",
     [
         ("setup_spyder.launcher", "launch"),
+        ("setup_spyder.launcher", "launch_native"),
         ("setup_spyder.perfil", "conf_dir_for"),
         ("setup_spyder.perfil", "resolve_hidden_paths"),
         ("setup_spyder.patches", "render_launcher"),
@@ -133,3 +141,5 @@ def test_o_console_script_continua_registrado():
     found = {ep.name: ep.value for ep in entry_points(group="console_scripts")}
     assert "setup-spyder" in found, "o console_script setup-spyder sumiu"
     assert found["setup-spyder"] == "setup_spyder.cli:main"
+    assert "setup-spyder-fork" in found, "o console_script setup-spyder-fork sumiu"
+    assert found["setup-spyder-fork"] == "setup_spyder.fork:main"
