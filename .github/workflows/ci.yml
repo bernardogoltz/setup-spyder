@@ -6,13 +6,14 @@ on:
   pull_request:
 
 env:
-  # `spyder` is the bernardogoltz fork, pinned by commit in pyproject.toml and
-  # fetched from GitHub; there is no lockfile to honour, uv resolves on the fly.
+  # `spyder` is the bernardogoltz fork, pinned by commit in pyproject.toml,
+  # resolved in uv.lock and fetched from GitHub. The fork is a pre-release
+  # (5.6.0.devN), so uv needs to be told to accept one.
   UV_PRERELEASE: allow
-  # QT_QPA_PLATFORM=offscreen is set only on Linux (see the `full` job): the
-  # Windows runner has a desktop session, and QtWebEngine under the offscreen
-  # platform on Windows dies with an access violation the moment a
-  # QWebEngineView is created (first test in tests/qt).
+  # QT_QPA_PLATFORM=offscreen and the QtWebEngine flags are set only on Linux
+  # (see the `full` job): the Windows runner has a desktop session, and
+  # QtWebEngine under the offscreen platform on Windows dies with an access
+  # violation the moment a QWebEngineView is created (first test in tests/qt).
 
 jobs:
   unit:
@@ -53,6 +54,20 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libegl1 libxkbcommon-x11-0 libxcb-cursor0 libnss3 libasound2t64 libxcomposite1 libxdamage1 libxrandr2 libgbm1 libxss1
           echo "QT_QPA_PLATFORM=offscreen" >> "$GITHUB_ENV"
+          # A Qt platform plugin is not enough for QtWebEngine: the Chromium
+          # child process aborts, and an abort takes the whole pytest run with
+          # it (exit code 134, no traceback). Two reasons on this runner, both
+          # of them environment and not code:
+          #   * the sandbox needs unprivileged user namespaces, which
+          #     ubuntu-24.04 denies by AppArmor, and the setuid helper that
+          #     would replace them is not setuid inside a pip wheel;
+          #   * there is no GPU, so the default GL path has nothing to bind to.
+          # tests/qt still probes for a working QtWebEngine in a subprocess
+          # (helpers/webengine.py) and skips the page-driving tests with a
+          # reason if this is not enough, instead of aborting the session.
+          echo "QTWEBENGINE_DISABLE_SANDBOX=1" >> "$GITHUB_ENV"
+          echo "QTWEBENGINE_CHROMIUM_FLAGS=--no-sandbox --disable-gpu --disable-dev-shm-usage" >> "$GITHUB_ENV"
+          echo "LIBGL_ALWAYS_SOFTWARE=1" >> "$GITHUB_ENV"
       - name: Everything except the GUI e2e run
         run: uv run --python ${{ matrix.python-version }} pytest -m "not e2e" -v
 

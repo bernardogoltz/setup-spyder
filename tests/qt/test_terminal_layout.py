@@ -16,7 +16,7 @@ def javascript(qtbot, terminal, source):
     return result[0]
 
 
-def test_long_directory_keeps_session_status_visible(qtbot, terminal):
+def test_long_directory_keeps_session_status_visible(live_page, qtbot, terminal):
     terminal.setAttribute(Qt.WA_DontShowOnScreen)
     terminal.resize(400, 300)
     terminal.show()
@@ -38,11 +38,13 @@ def test_long_directory_keeps_session_status_visible(qtbot, terminal):
     assert label.text().endswith("analysis")
 
 
-def test_xterm_resize_and_output_preserve_manual_scroll(qtbot, terminal, patched_backend):
+def test_xterm_resize_and_output_preserve_manual_scroll(
+    live_page, qtbot, terminal, patched_backend
+):
     terminal.setAttribute(Qt.WA_DontShowOnScreen)
     terminal.resize(640, 400)
     terminal.show()
-    qtbot.waitUntil(lambda: terminal._page_ready, timeout=10000)
+    qtbot.waitUntil(lambda: terminal._page_ready, timeout=30000)
     terminal.start_session(provider="none")
     qtbot.waitUntil(lambda: bool(patched_backend.sizes), timeout=5000)
     old_cols = terminal._cols

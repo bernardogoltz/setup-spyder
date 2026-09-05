@@ -32,7 +32,7 @@ classifiers = [
 dependencies = [
     "pandas>=2.0",
     "rich>=13.9",
-    "spyder @ git+https://github.com/bernardogoltz/spyder.git@524b1f4125d0948a2283e629ddc979cac6e0aed8",
+    "spyder @ git+https://github.com/bernardogoltz/spyder.git@62bb3bdb7c18970fa0b9e180c666531ec9c94c69",
     "pywinpty>=2; platform_system == 'Windows'",
     "ptyprocess>=0.7; platform_system != 'Windows'",
     # The Qt payload has no version that runs everywhere: PyQt5-Qt5 /

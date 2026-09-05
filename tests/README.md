@@ -64,6 +64,22 @@ skipped", código 5), levando `tests/unit` junto.
 plataforma offscreen morre com *access violation* ao criar o primeiro
 `QWebEngineView`; o runner do Windows tem sessão de desktop e não precisa.
 
+Uma plataforma Qt, porém, não basta para o QtWebEngine. Se o processo do
+Chromium não sobe, ele **aborta** — não há exceção para um teste interceptar, e
+a sessão inteira do pytest morre junto (foi o `exit code 134` do job
+`full (ubuntu-latest)`, assim que a suíte passou a esperar a página do terminal
+carregar de verdade). Os dois testes de `tests/qt/test_terminal_layout.py` que
+esperam `_page_ready` ou chamam `runJavaScript` pedem por isso a fixture
+`live_page`: ela roda `helpers/webengine.py` num subprocesso descartável antes,
+e se a sonda morrer esses dois pulam com a razão, em vez de derrubar o resto.
+Montar o widget não precisa da sonda — a view é criada e a página simplesmente
+nunca carrega.
+
+Na CI do Linux o job `full` ainda desliga o sandbox do QtWebEngine
+(`QTWEBENGINE_DISABLE_SANDBOX=1`: o ubuntu-24.04 nega os *user namespaces* sem
+privilégio de que ele depende, e o auxiliar setuid não vem setuid dentro de uma
+wheel) e força GL por software, já que o runner não tem GPU.
+
 ## Os três regimes da suíte
 
 1. **Passa hoje.** Congela o que `setup_spyder/` já faz: a API pública
@@ -109,6 +125,7 @@ As oito divergências, e como foram resolvidas:
 | `tests/unit/test_cross_platform.py` | 12 (“CI por plataforma”), 5.2, 6.3 |
 | `tests/qt/test_widget_session.py` | 6.2, 7 |
 | `tests/qt/test_plugin_dock.py` | 6, 7 |
+| `tests/qt/test_terminal_layout.py` | 6, 7 (geometria e scrollback) |
 | `tests/qt/test_backend_failure.py` | 6.1, 8 |
 | `tests/pty/test_pty_contract.py` | 6.2, 10 (“PTY por plataforma”) |
 | `tests/integration/test_process_isolation.py` | 5.2 |

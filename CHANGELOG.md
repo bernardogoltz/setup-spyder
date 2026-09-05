@@ -19,6 +19,22 @@
   first `QWebEngineView`, killing the `full` job mid-run.
 - `setup-uv` cache keyed on `pyproject.toml` (there is no lockfile), instead
   of a key that never invalidates.
+- The `full (ubuntu-latest)` job aborted with exit code 134 (SIGABRT) as soon
+  as `tests/qt/test_terminal_layout.py` began waiting for the terminal page to
+  actually load. Under `QT_QPA_PLATFORM=offscreen` the QtWebEngine child
+  process fails to start, and a Chromium abort kills the whole pytest session
+  without raising anything a test could catch. Two changes: the Linux job now
+  turns the QtWebEngine sandbox off (ubuntu-24.04 denies the unprivileged user
+  namespaces it needs, and the wheel's helper is not setuid) and forces
+  software GL; and the two tests that drive the page take a new `live_page`
+  fixture, which probes QtWebEngine in a throwaway subprocess
+  (`tests/helpers/webengine.py`) and skips them with the reason if it dies,
+  instead of letting the abort take the session down.
+
+### Changed
+- The `spyder` fork pin moves to `62bb3bd` (variable explorer and console
+  appearance work), which is the fork commit whose `setup-spyder` submodule
+  points back at this repository.
 
 ## 0.3.0 — 2026-09-04
 

@@ -104,3 +104,20 @@ def terminal(qtbot, widget_module, patched_backend, project_root):
     qtbot.addWidget(widget)
     widget.set_working_directory(str(project_root))
     return widget
+
+
+@pytest.fixture(scope="session")
+def live_page():
+    """Exige um QtWebEngine que carrega a pagina e executa JavaScript.
+
+    Montar o widget sobrevive a um QtWebEngine capenga: a view e criada e a
+    pagina simplesmente nunca carrega. Esperar `_page_ready` ou chamar
+    `runJavaScript`, nao - o Chromium aborta e leva a sessao inteira do pytest
+    junto, sem excecao nenhuma para interceptar. A pergunta e feita antes, num
+    subprocesso (`helpers.webengine`).
+    """
+    from helpers.webengine import motivo_indisponivel
+
+    razao = motivo_indisponivel()
+    if razao:
+        pytest.skip(razao)
