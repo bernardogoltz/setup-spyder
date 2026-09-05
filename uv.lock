@@ -4660,7 +4660,7 @@ requires-dist = [
     { name = "pyqtwebengine-qt5", marker = "sys_platform == 'win32'", specifier = "<5.15.3" },
     { name = "pywinpty", marker = "sys_platform == 'win32'", specifier = ">=2" },
     { name = "rich", specifier = ">=13.9" },
-    { name = "spyder", git = "https://github.com/bernardogoltz/spyder.git?rev=42de553c5104c860f83f162031c5f9f655187beb" },
+    { name = "spyder", git = "https://github.com/bernardogoltz/spyder.git?rev=524b1f4125d0948a2283e629ddc979cac6e0aed8" },
 ]
 
 [package.metadata.requires-dev]
@@ -4955,7 +4955,7 @@ wheels = [
 [[package]]
 name = "spyder"
 version = "5.6.0.dev0"
-source = { git = "https://github.com/bernardogoltz/spyder.git?rev=42de553c5104c860f83f162031c5f9f655187beb#42de553c5104c860f83f162031c5f9f655187beb" }
+source = { git = "https://github.com/bernardogoltz/spyder.git?rev=524b1f4125d0948a2283e629ddc979cac6e0aed8#524b1f4125d0948a2283e629ddc979cac6e0aed8" }
 dependencies = [
     { name = "applaunchservices", marker = "sys_platform == 'darwin'" },
     { name = "atomicwrites" },
@@ -4988,7 +4988,9 @@ dependencies = [
     { name = "pylint-venv" },
     { name = "pyls-spyder" },
     { name = "pyqt5" },
+    { name = "pyqt5-qt5", version = "5.15.2", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform == 'win32'" },
     { name = "pyqtwebengine" },
+    { name = "pyqtwebengine-qt5", version = "5.15.2", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform == 'win32'" },
     { name = "python-lsp-black" },
     { name = "python-lsp-server", extra = ["all"] },
     { name = "pyxdg", marker = "sys_platform == 'linux'" },
