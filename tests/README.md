@@ -86,6 +86,7 @@ As oito divergências, e como foram resolvidas:
 | `tests/unit/test_argv_no_shell.py` | 6.2, 11, 12 |
 | `tests/unit/test_entry_point.py` | 4, 6 |
 | `tests/unit/test_plan_divergences.py` | 1, 2.2, 4, 5.3, 7, 8, 11 |
+| `tests/unit/test_cross_platform.py` | 12 (“CI por plataforma”), 5.2, 6.3 |
 | `tests/qt/test_widget_session.py` | 6.2, 7 |
 | `tests/qt/test_plugin_dock.py` | 6, 7 |
 | `tests/qt/test_backend_failure.py` | 6.1, 8 |
@@ -206,6 +207,27 @@ arquivo; se persistir isolado, aí é regressão.
 
 ## O que a suíte deliberadamente não testa
 
-Nada que dependa de rede, conta ou credencial real. Login das CLIs,
-comportamento das TUIs reais e a matriz de sistemas operacionais ficam para a CI
-por plataforma prevista na seção 12.
+Nada que dependa de rede, conta ou credencial real. Login das CLIs e
+comportamento das TUIs reais ficam para a CI por plataforma prevista na
+seção 12.
+
+A matriz de sistemas operacionais é dividida em duas metades.
+`tests/unit/test_cross_platform.py` (marcador `plataforma`) roda **aqui**, no
+sistema de quem executa a suíte, tudo que é *decisão* por sistema: os
+marcadores PEP 508 do `pyproject.toml` avaliados contra um ambiente sintético
+por SO, e os ramos `win32`/`darwin`/`linux` do código com `sys.platform`
+simulado e dublês para `subprocess.Popen`, `os.killpg` e `signal.signal`.
+
+```powershell
+uv run pytest -m plataforma -v      # os três sistemas, sem sair do seu
+```
+
+O que ele existe para pegar é a classe de erro que não depende do runner — e
+que a CI só denuncia depois do push, num sistema que você não tem na mesa. O
+caso que motivou o arquivo: `pyqt5-qt5` 5.15.2 é a última versão com wheel de
+Windows e não tem wheel `macosx arm64`; sem o piso `>=5.15.11` fora do Windows,
+o `uv` fixava 5.15.2 para todo mundo e o `macos-latest` (Apple Silicon) morria
+na instalação, antes do primeiro teste.
+
+O resto continua sendo da CI: wheel que existe no índice mas não instala,
+ConPTY que se comporta diferente, fonte que só existe naquele sistema.

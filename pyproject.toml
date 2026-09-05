@@ -119,4 +119,5 @@ markers = [
     "slow: importa o Spyder ou espera processos",
     "divergencia: o codigo de hoje contraria o plano (xfail ate migrar)",
     "legacy: testes da API 0.2.0 com stubs do Spyder",
+    "plataforma: o mesmo contrato nos tres sistemas, com o SO simulado",
 ]

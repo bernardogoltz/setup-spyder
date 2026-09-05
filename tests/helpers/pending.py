@@ -69,14 +69,34 @@ def owning_distribution(package: str = "setup_spyder") -> str:
     Neste checkout `setup_spyder` viaja dentro da distribuicao `spyder`; num
     repositorio proprio ele seria `setup-spyder`. Os testes de empacotamento
     perguntam em vez de chutar.
-    """
-    from importlib.metadata import distributions, packages_distributions
 
-    donos = packages_distributions().get(package) or []
-    if donos:
-        return donos[0]
+    Sao tres consultas, da mais direta para a mais crua, porque
+    `packages_distributions` so existe do Python 3.10 em diante e a matriz da
+    CI comeca no 3.9.
+    """
+    from importlib.metadata import distributions
+
+    try:  # Python >= 3.10
+        from importlib.metadata import packages_distributions
+    except ImportError:  # Python 3.9
+        packages_distributions = None
+
+    if packages_distributions is not None:
+        donos = packages_distributions().get(package) or []
+        if donos:
+            return donos[0]
+
+    alvo = package.replace("_", "-").lower()
     for dist in distributions():
         nome = dist.metadata["Name"]
-        if nome and nome.replace("_", "-").lower() == package.replace("_", "-"):
+        if nome and nome.replace("_", "-").lower() == alvo:
             return nome
+
+    # A distribuicao tem outro nome que o pacote: pergunte a ela o que publica.
+    for dist in distributions():
+        nome = dist.metadata["Name"]
+        topo = (dist.read_text("top_level.txt") or "").split()
+        if nome and package in topo:
+            return nome
+
     not_implemented(f"nenhuma distribuicao instalada publica {package}")
