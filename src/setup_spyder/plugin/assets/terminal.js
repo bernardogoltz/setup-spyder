@@ -19,6 +19,7 @@
     scrollback: options.scrollback || 5000,
     fontFamily: options.fontFamily || "monospace",
     fontSize: options.fontSize || 13,
+    lineHeight: options.lineHeight || 1.15,
     theme: options.theme || {},
     allowProposedApi: false,
     convertEol: false,
@@ -29,6 +30,18 @@
   term.open(container);
 
   var bridge = null;
+  var fitFrame = null;
+
+  function applyPageTheme(theme) {
+    if (theme.background) {
+      document.body.style.background = theme.background;
+      container.style.setProperty("--terminal-background", theme.background);
+    }
+    container.style.setProperty("--terminal-scrollbar",
+      theme.selectionBackground || theme.foreground || "currentColor");
+  }
+
+  applyPageTheme(options.theme || {});
 
   // Diagnostics hook (used by tests and by the Python side); not an API.
   window.aiTerminal = { term: term, fit: fit };
@@ -37,11 +50,22 @@
   });
 
   function doFit() {
+    if (!container.clientWidth || !container.clientHeight) { return; }
     try {
       fit.fit();
     } catch (err) {
       /* the container may not be laid out yet */
     }
+  }
+
+  // Dock resizing can emit several events in one frame. Keep PTY geometry
+  // in step with the rendered terminal without repeating layout work.
+  function scheduleFit() {
+    if (fitFrame !== null) { return; }
+    fitFrame = window.requestAnimationFrame(function () {
+      fitFrame = null;
+      doFit();
+    });
   }
 
   function applyOptions(json) {
@@ -53,12 +77,12 @@
     }
     if (next.fontFamily) { term.options.fontFamily = next.fontFamily; }
     if (next.fontSize) { term.options.fontSize = next.fontSize; }
+    if (next.lineHeight) { term.options.lineHeight = next.lineHeight; }
     if (next.theme) { term.options.theme = next.theme; }
     if (next.scrollback) { term.options.scrollback = next.scrollback; }
-    if (next.theme && next.theme.background) {
-      document.body.style.background = next.theme.background;
-    }
-    doFit();
+    if (next.theme) { applyPageTheme(next.theme); }
+    scheduleFit();
+    if (document.fonts) { document.fonts.ready.then(scheduleFit); }
   }
 
   // Ctrl+Shift+C copies the selection; Ctrl+C itself must reach the child as
@@ -107,7 +131,15 @@
     bridge.ready(term.rows, term.cols);
   });
 
-  window.addEventListener("resize", doFit);
+  window.addEventListener("resize", scheduleFit);
+  document.addEventListener("visibilitychange", scheduleFit);
+  if (window.ResizeObserver) {
+    new ResizeObserver(scheduleFit).observe(container);
+  }
+  if (document.fonts) {
+    document.fonts.ready.then(scheduleFit);
+    document.fonts.addEventListener("loadingdone", scheduleFit);
+  }
   container.addEventListener("mousedown", function () {
     term.focus();
   });

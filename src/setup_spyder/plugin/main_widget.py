@@ -17,10 +17,11 @@ import os
 import sys
 from pathlib import Path
 
-from qtpy.QtCore import QFile, QIODevice, QObject, Qt, Signal, Slot
+from qtpy.QtCore import QEvent, QFile, QIODevice, QObject, Qt, Signal, Slot
 from qtpy.QtWidgets import (
     QApplication,
     QComboBox,
+    QHBoxLayout,
     QLabel,
     QMessageBox,
     QSizePolicy,
@@ -195,7 +196,7 @@ def terminal_appearance(scrollback: int) -> dict:
     """xterm options derived from Spyder's palette and editor font."""
     theme = {}
     try:
-        from spyder.utils.palette import QStylePalette, SpyderPalette
+        from spyder.utils.palette import QStylePalette
 
         theme = {
             "background": QStylePalette.COLOR_BACKGROUND_1,
@@ -203,7 +204,7 @@ def terminal_appearance(scrollback: int) -> dict:
             "cursor": QStylePalette.COLOR_TEXT_1,
             "cursorAccent": QStylePalette.COLOR_BACKGROUND_1,
             "selectionBackground": QStylePalette.COLOR_ACCENT_2,
-            "selectionForeground": SpyderPalette.COLOR_HIGHLIGHT_4,
+            "selectionForeground": QStylePalette.COLOR_TEXT_1,
         }
     except Exception as exc:  # palette is cosmetic; never block the pane
         logger.debug("palette unavailable: %s", exc)
@@ -222,9 +223,41 @@ def terminal_appearance(scrollback: int) -> dict:
         "theme": theme,
         "fontFamily": f'"{family}", "Cascadia Mono", Consolas, "DejaVu Sans Mono", monospace',
         "fontSize": max(round(size * 96 / 72), 8),
+        "lineHeight": 1.15,
         "scrollback": int(scrollback),
         "windowsMode": sys.platform == "win32",
     }
+
+
+class DirectoryLabel(QLabel):
+    """Keep the project directory readable without widening the dock."""
+
+    def __init__(self, parent: QWidget) -> None:
+        super().__init__(parent)
+        self._path = ""
+        self.setTextFormat(Qt.PlainText)
+        self.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Preferred)
+        self.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+
+    def set_path(self, path: str) -> None:
+        self._path = path
+        self.setToolTip(path)
+        self.setAccessibleName(_("Directory for new sessions: %s") % path)
+        self._elide_path()
+
+    def _elide_path(self) -> None:
+        self.setText(self.fontMetrics().elidedText(
+            self._path, Qt.ElideLeft, max(self.contentsRect().width(), 0)
+        ))
+
+    def resizeEvent(self, event) -> None:
+        super().resizeEvent(event)
+        self._elide_path()
+
+    def changeEvent(self, event) -> None:
+        super().changeEvent(event)
+        if event.type() in (QEvent.FontChange, QEvent.StyleChange):
+            self._elide_path()
 
 
 class AITerminalWidget(PluginMainWidget):
@@ -265,10 +298,21 @@ class AITerminalWidget(PluginMainWidget):
         self._selector.currentIndexChanged.connect(self._on_selector_changed)
 
         self._state_label = QLabel(self)
+        self._state_label.setTextFormat(Qt.PlainText)
+        self._directory_label = DirectoryLabel(self)
+        self._status_bar = QWidget(self)
+        self._status_bar.setObjectName("ai_terminal_status")
+        status_layout = QHBoxLayout(self._status_bar)
+        status_layout.setContentsMargins(10, 5, 10, 5)
+        status_layout.setSpacing(12)
+        status_layout.addWidget(self._state_label)
+        status_layout.addWidget(self._directory_label, 1)
         self._hint_label = QLabel(self)
+        self._hint_label.setTextFormat(Qt.PlainText)
         self._hint_label.setWordWrap(True)
         self._hint_label.setTextInteractionFlags(Qt.TextSelectableByMouse)
         self._error_label = QLabel(self)
+        self._error_label.setTextFormat(Qt.PlainText)
         self._error_label.setWordWrap(True)
         self._error_label.setTextInteractionFlags(Qt.TextSelectableByMouse)
         self._style_labels()
@@ -284,10 +328,12 @@ class AITerminalWidget(PluginMainWidget):
         self._create_view()
 
         layout = QVBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
         layout.addWidget(self._view if self._view is not None else self._placeholder, 1)
         layout.addWidget(self._hint_label)
         layout.addWidget(self._error_label)
-        layout.addWidget(self._state_label)
+        layout.addWidget(self._status_bar)
         self.setLayout(layout)
 
         self._select_initial_provider()
@@ -815,8 +861,9 @@ class AITerminalWidget(PluginMainWidget):
         elif state == SessionState.Error:
             detail = _("see message above")
         text = f"{state} · {detail}" if detail else state
-        self._state_label.setText(f"{text} · {self._workdir}")
-        self._state_label.setToolTip(self._workdir)
+        self._state_label.setText(text)
+        self._state_label.setToolTip(text)
+        self._directory_label.set_path(self._workdir)
         self._hint_label.setText(self._hint_message)
         self._hint_label.setVisible(bool(self._hint_message))
         self._error_label.setText(self._error_message)
@@ -827,13 +874,21 @@ class AITerminalWidget(PluginMainWidget):
             from spyder.utils.palette import QStylePalette, SpyderPalette
 
             self._state_label.setStyleSheet(
-                f"color: {QStylePalette.COLOR_TEXT_4}; padding: 2px 6px;"
+                f"color: {QStylePalette.COLOR_TEXT_1}; font-weight: 600;"
+            )
+            self._directory_label.setStyleSheet(
+                f"color: {QStylePalette.COLOR_TEXT_4};"
+            )
+            self._status_bar.setStyleSheet(
+                "QWidget#ai_terminal_status {"
+                f"border-top: 1px solid {QStylePalette.COLOR_BACKGROUND_4};"
+                "}"
             )
             self._hint_label.setStyleSheet(
-                f"color: {SpyderPalette.COLOR_WARN_2}; padding: 2px 6px;"
+                f"color: {SpyderPalette.COLOR_WARN_2}; padding: 6px 10px;"
             )
             self._error_label.setStyleSheet(
-                f"color: {SpyderPalette.COLOR_ERROR_2}; padding: 2px 6px;"
+                f"color: {SpyderPalette.COLOR_ERROR_2}; padding: 6px 10px;"
             )
         except Exception as exc:
             logger.debug("label style skipped: %s", exc)

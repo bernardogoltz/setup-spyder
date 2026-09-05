@@ -19,10 +19,21 @@ html, body {
   right: 0;
   bottom: 0;
   left: 0;
-  padding: 2px;
+  padding: 8px 10px;
 }
 #terminal .xterm {
   height: 100%;
+}
+#terminal .xterm-viewport::-webkit-scrollbar {
+  width: 10px;
+}
+#terminal .xterm-viewport::-webkit-scrollbar-thumb {
+  background: var(--terminal-scrollbar);
+  border: 3px solid var(--terminal-background);
+  border-radius: 6px;
+}
+#terminal .xterm-viewport::-webkit-scrollbar-track {
+  background: var(--terminal-background);
 }
 </style>
 </head>
