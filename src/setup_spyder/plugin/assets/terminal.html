@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>AI Terminal</title>
+<style>
+/*__XTERM_CSS__*/
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  overflow: hidden;
+  background: __BACKGROUND__;
+}
+#terminal {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  padding: 2px;
+}
+#terminal .xterm {
+  height: 100%;
+}
+</style>
+</head>
+<body>
+<div id="terminal"></div>
+<script>
+/* QtWebEngine 5.15 embeds a Chromium older than the DOM APIs xterm.js 5.x
+   relies on; provide the missing ones before xterm.js loads. */
+(function () {
+  function replaceChildren() {
+    while (this.lastChild) { this.removeChild(this.lastChild); }
+    if (arguments.length) { this.append.apply(this, arguments); }
+  }
+  [Element, Document, DocumentFragment].forEach(function (type) {
+    if (type && type.prototype && !type.prototype.replaceChildren) {
+      type.prototype.replaceChildren = replaceChildren;
+    }
+  });
+})();
+</script>
+<script>/*__QWEBCHANNEL_JS__*/</script>
+<script>/*__XTERM_JS__*/</script>
+<script>/*__XTERM_FIT_JS__*/</script>
+<script>window.AI_TERMINAL_OPTIONS = __OPTIONS_JSON__;</script>
+<script>/*__TERMINAL_JS__*/</script>
+</body>
+</html>

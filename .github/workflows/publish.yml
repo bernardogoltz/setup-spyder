@@ -1,37 +1,42 @@
 name: Publish
 
+# `setup-spyder` depends on the bernardogoltz/spyder fork by Git URL
+# (`spyder @ git+https://github.com/bernardogoltz/spyder.git@<commit>`).
+# PyPI rejects distributions with direct-URL requirements, so releases are
+# published as GitHub Release assets and installed with
+#   uv add --dev git+https://github.com/bernardogoltz/setup-spyder@v<version>
+# or from the attached wheel URL.
+
 on:
   release:
     types: [published]
   workflow_dispatch:
-    inputs:
-      target:
-        description: "Index to publish to"
-        type: choice
-        options:
-          - testpypi
-          - pypi
-        default: testpypi
+
+env:
+  QT_QPA_PLATFORM: offscreen
+  UV_PRERELEASE: allow
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
         with:
-          python-version: "3.11"
-      - name: Run unit tests
-        run: uv run pytest -v
+          python-version: "3.12"
+      - name: Tests (everything except the GUI e2e run)
+        run: uv run pytest -m "not e2e" -v
 
   build:
     needs: test
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
         with:
-          python-version: "3.11"
+          python-version: "3.12"
 
       - name: Check the release tag matches the package version
         if: github.event_name == 'release'
@@ -56,39 +61,8 @@ jobs:
           name: dist
           path: dist/
 
-  publish-testpypi:
-    needs: build
-    if: github.event_name == 'workflow_dispatch' && inputs.target == 'testpypi'
-    runs-on: ubuntu-latest
-    environment: testpypi
-    permissions:
-      contents: read
-      id-token: write
-    steps:
-      - uses: astral-sh/setup-uv@v5
-      - uses: actions/download-artifact@v4
-        with:
-          name: dist
-          path: dist/
-      - name: Publish to TestPyPI
-        run: |
-          uv publish \
-            --publish-url https://test.pypi.org/legacy/ \
-            --check-url https://test.pypi.org/simple/
-
-  publish-pypi:
-    needs: build
-    if: github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && inputs.target == 'pypi')
-    runs-on: ubuntu-latest
-    environment: pypi
-    permissions:
-      contents: read
-      id-token: write
-    steps:
-      - uses: astral-sh/setup-uv@v5
-      - uses: actions/download-artifact@v4
-        with:
-          name: dist
-          path: dist/
-      - name: Publish to PyPI
-        run: uv publish --check-url https://pypi.org/simple/
+      - name: Attach wheel and sdist to the GitHub release
+        if: github.event_name == 'release'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "$GITHUB_REF_NAME" dist/* --clobber

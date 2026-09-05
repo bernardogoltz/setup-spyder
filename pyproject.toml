@@ -1,13 +1,13 @@
 [project]
 name = "setup-spyder"
 dynamic = ["version"]
-description = "Importable Spyder 5.x launcher (JetBrains Mono, wrap lines) for other repositories."
+description = "Launcher for the bernardogoltz/spyder fork (Spyder 5.x) with an AI Terminal pane (codex / claude), isolated per-project profile, uv-first."
 readme = "README.md"
 requires-python = ">=3.9"
 license = "MIT"
 license-files = ["LICENSE"]
 authors = [{ name = "Bernardo Goltz" }]
-keywords = ["spyder", "ide", "eda", "data-analysis", "launcher", "uv"]
+keywords = ["spyder", "ide", "eda", "data-analysis", "launcher", "uv", "codex", "claude"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Environment :: Console",
@@ -22,27 +22,41 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
-    "Programming Language :: Python :: 3.13",
-    "Programming Language :: Python :: 3.14",
     "Topic :: Scientific/Engineering",
     "Topic :: Software Development :: User Interfaces",
 ]
+# `spyder` is the bernardogoltz fork, pinned to a commit, pulled from GitHub
+# (plan §2.5). Never a local path, never a floating branch, never the PyPI
+# `spyder`. The fork is a pre-release (5.6.0.devN); direct URL requirements
+# bypass the pre-release filter, and [tool.uv] below allows it explicitly.
 dependencies = [
     "pandas>=2.0",
     "rich>=13.9",
-    "spyder>=5.5,<6",
+    "spyder @ git+https://github.com/bernardogoltz/spyder.git@42de553c5104c860f83f162031c5f9f655187beb",
+    "pywinpty>=2; platform_system == 'Windows'",
+    "ptyprocess>=0.7; platform_system != 'Windows'",
+    # PyQt5-Qt5 / PyQtWebEngine-Qt5 > 5.15.2 publish no Windows wheel; without
+    # this marker uv's universal resolution picks 5.15.19 and fails on Windows
+    # for every consumer of this package.
+    "pyqt5-qt5<5.15.3; platform_system == 'Windows'",
+    "pyqtwebengine-qt5<5.15.3; platform_system == 'Windows'",
 ]
 
 [project.urls]
 Homepage = "https://github.com/bernardogoltz/setup-spyder"
 Repository = "https://github.com/bernardogoltz/setup-spyder"
 Issues = "https://github.com/bernardogoltz/setup-spyder/issues"
+Spyder = "https://github.com/bernardogoltz/spyder"
 
 [project.scripts]
 setup-spyder = "setup_spyder.cli:main"
 setup-spyder-integration = "setup_spyder.integration:main"
 
+[project.entry-points."spyder.plugins"]
+setup_spyder_ai = "setup_spyder.plugin.plugin:AITerminalPlugin"
+
 [tool.uv]
+prerelease = "allow"
 # PyQt5-Qt5 / PyQtWebEngine-Qt5 5.15.19 ship no win_amd64 wheel, so the lock
 # has to fork the resolution and keep a Windows-installable Qt for Windows.
 required-environments = [
@@ -51,12 +65,18 @@ required-environments = [
 
 [dependency-groups]
 dev = [
-    "pytest>=8",
+    "pytest>=7,<8",
+    "pytest-qt>=4",
+    "psutil>=5.3",
 ]
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[tool.hatch.metadata]
+# Required by hatchling for the `spyder @ git+https://...` dependency above.
+allow-direct-references = true
 
 [tool.hatch.version]
 path = "src/setup_spyder/__init__.py"
@@ -69,4 +89,23 @@ include = ["src", "tests", "README.md", "LICENSE"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-ra"
+norecursedirs = [".git", ".venv", "build", "dist", "*.egg-info", "fixture_integration"]
+python_files = ["test_*.py"]
+addopts = "-ra --strict-markers"
+markers = [
+    "phase0: Fase 0 - baseline e ADR (contratos publicos atuais)",
+    "phase1: Fase 1 - prototipo vertical do terminal (PTY)",
+    "phase2: Fase 2 - refatoracao do launcher e perfis",
+    "phase3: Fase 3 - plugin minimo",
+    "phase4: Fase 4 - provedores codex/claude",
+    "phase5: Fase 5 - polimento da instancia",
+    "phase6: Fase 6 - empacotamento e release",
+    "unit: testes unitarios, sem Qt e sem subprocesso pesado",
+    "qt: exige pytest-qt e um QApplication",
+    "pty: exige um backend PTY/ConPTY real",
+    "integration: subprocesso real, wheel ou config em disco",
+    "e2e: abre o Spyder de verdade (opt-in via SETUP_SPYDER_E2E=1)",
+    "slow: importa o Spyder ou espera processos",
+    "divergencia: o codigo de hoje contraria o plano (xfail ate migrar)",
+    "legacy: testes da API 0.2.0 com stubs do Spyder",
+]

@@ -1,0 +1,43 @@
+# Changelog
+
+## 0.3.0 — 2026-09-04
+
+Launcher for the `bernardogoltz/spyder` fork with the AI Terminal pane.
+
+### Added
+- `spyder` now resolves to the fork `bernardogoltz/spyder` (Spyder 5.x API,
+  `5.6.0.dev0`), pinned by commit in `pyproject.toml`; the PyPI `spyder` is no
+  longer a dependency. Direct-URL requirements are refused by PyPI, so releases
+  are published as GitHub Release assets and installed from Git.
+- **AI Terminal** plugin (`spyder.plugins` entry point `setup_spyder_ai`):
+  xterm.js + `QWebChannel` + ConPTY (`pywinpty`) / PTY (`ptyprocess`) terminal
+  pane that starts `codex` or `claude`; provider selector, new session,
+  restart, interrupt, clear, close, state indicator, preferences page.
+- `--agent {auto,codex,claude,none}`, `--profile {ephemeral,project}`,
+  `--reset-profile`, `--conf-dir`, `--ephemeral`, `--sem-estilo`.
+- Persistent per-project profile in `<root>/.spyproject/setup-spyder/`, seeded
+  once (versioned seed, never rewritten on later starts); ephemeral profile
+  keeps the old temp-directory behaviour.
+- Clean child bootstrap (`python -m setup_spyder.bootstrap`): the parent never
+  imports Spyder's configuration or Qt; `SPYDER_CONFDIR`, `SETUP_SPYDER_AGENT`,
+  `SETUP_SPYDER_WORKDIR`, `SETUP_SPYDER_AUTOSTART` are set before Spyder starts.
+- Test suite organised by plan phase (`unit`, `qt`, `pty`, `integration`,
+  `e2e`), with a deterministic fake TUI for the PTY contract.
+
+### Changed
+- `launch()` keeps its signature and gains keyword-only options; `main`,
+  `open_spyder`, `setup-spyder-integration` and the existing flags
+  (`--no-launch`, `--keep-config`, `-w`, `--hide`, `--show`) are preserved.
+- `.spyproject/` is created without importing Spyder; `single_instance` is
+  left at Spyder's default so a project profile is not opened twice.
+- CI runs unit tests on Linux/macOS/Windows and the Qt/PTY suite on Windows
+  and Linux (offscreen); `uv.lock` is no longer versioned.
+
+### Removed
+- No `CONDA_*` cleanup, no global `QApplication.beep` patch, no disabling of
+  internal error reports or dependency warnings.
+
+## 0.2.0
+
+- Project-pane clutter filter (`--hide` / `--show`), Windows support,
+  integration routine, PyPI release workflow.

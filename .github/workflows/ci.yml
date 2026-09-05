@@ -5,40 +5,78 @@ on:
     branches: [main]
   pull_request:
 
+env:
+  # Qt without a display; QtWebEngine still initialises in this mode.
+  QT_QPA_PLATFORM: offscreen
+  # `spyder` is the bernardogoltz fork, pinned by commit in pyproject.toml and
+  # fetched from GitHub; there is no lockfile to honour, uv resolves on the fly.
+  UV_PRERELEASE: allow
+
 jobs:
-  test:
+  unit:
+    # No Qt, no PTY: launcher, profiles, providers, static scans.
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest]
-        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13", "3.14"]
-        include:
-          - os: windows-latest
-            python-version: "3.9"
-          - os: windows-latest
-            python-version: "3.13"
-          - os: macos-latest
-            python-version: "3.13"
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: ["3.9", "3.12"]
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Run unit tests
-        run: uv run --python ${{ matrix.python-version }} pytest -v
+      - name: Unit tests (no Qt, no PTY)
+        run: uv run --python ${{ matrix.python-version }} pytest -m "unit or legacy" -v
+
+  full:
+    # Qt widget tests, ConPTY/PTY contract and the integration probes that
+    # import the fork. Windows is the primary platform of this project.
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+        python-version: ["3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Qt runtime libraries (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libegl1 libxkbcommon-x11-0 libxcb-cursor0 libnss3 libasound2t64 libxcomposite1 libxdamage1 libxrandr2 libgbm1 libxss1
+      - name: Everything except the GUI e2e run
+        run: uv run --python ${{ matrix.python-version }} pytest -m "not e2e" -v
 
   build:
-    needs: test
+    needs: [unit]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
         with:
-          python-version: "3.11"
+          python-version: "3.12"
       - name: Build wheel and sdist
         run: uv build
       - name: Validate package metadata
         run: uvx twine check --strict dist/*
+      - name: The wheel must carry the plugin entry point and the web assets
+        run: |
+          uv run --with setup-spyder@dist/*.whl --no-project python - <<'EOF'
+          from importlib.metadata import distribution
+          from importlib.resources import files
+          dist = distribution("setup-spyder")
+          eps = dist.read_text("entry_points.txt")
+          assert "setup_spyder_ai = setup_spyder.plugin.plugin:AITerminalPlugin" in eps, eps
+          assets = files("setup_spyder.plugin") / "assets"
+          for name in ("terminal.html", "terminal.js", "xterm.js", "xterm.css"):
+              assert (assets / name).is_file(), name
+          reqs = " ".join(dist.requires or [])
+          assert "git+https://github.com/bernardogoltz/spyder.git@" in reqs, reqs
+          print("wheel ok")
+          EOF
       - name: Show artifacts
         run: ls -lh dist
