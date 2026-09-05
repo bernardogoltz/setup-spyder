@@ -2,7 +2,7 @@
 
 Runs with the fake Spyder from the sibling ``conftest.py``: the parent never
 imports Spyder, and the child bootstrap is replaced by a recorded
-``subprocess.run``. Argument parsing, the public signature, the child command
+``run_child``. Argument parsing, the public signature, the child command
 and the profile seed are covered in ``tests/unit`` and are not repeated here.
 """
 
@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
-from types import SimpleNamespace
 
 import pytest
 
@@ -168,12 +167,14 @@ def test_seed_profile_falls_back_when_jetbrains_missing(
 def record_child(monkeypatch: pytest.MonkeyPatch, returncode: int = 0) -> dict[str, object]:
     captured: dict[str, object] = {}
 
-    def fake_run(cmd, **kwargs):
+    def fake_run_child(cmd, env=None):
         captured["cmd"] = list(cmd)
-        captured["env"] = kwargs.get("env")
-        return SimpleNamespace(returncode=returncode)
+        captured["env"] = env
+        return returncode
 
-    monkeypatch.setattr(launcher.subprocess, "run", fake_run)
+    # `launcher.launch` runs the child through `run_child` (Job Object /
+    # session + signal forwarding), never through a bare `subprocess.run`.
+    monkeypatch.setattr(launcher, "run_child", fake_run_child)
     return captured
 
 

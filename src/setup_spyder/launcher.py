@@ -16,6 +16,7 @@ from importlib.util import find_spec
 from pathlib import Path
 from typing import NamedTuple
 
+from setup_spyder._children import run_child
 from setup_spyder._console import log, log_error, log_kv, log_ok, log_warn
 from setup_spyder.patches import render_launcher
 from setup_spyder.perfil import (
@@ -309,8 +310,10 @@ def launch(
         log("Close the Spyder window to finish.")
 
     try:
-        completed = subprocess.run(command, check=False, env=env)
-        code = completed.returncode
+        # The child tree (Spyder, its kernels, pylsp, QtWebEngine) dies with
+        # this process: Job Object on Windows, session + signal forwarding on
+        # POSIX. No shell in between.
+        code = run_child(command, env=env)
         ini = spyder_ini(chosen.path)
         if ini.is_file():
             log_kv("config", ini)

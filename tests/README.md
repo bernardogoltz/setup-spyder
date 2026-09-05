@@ -195,6 +195,15 @@ AITerminalPlugin(SpyderDockablePlugin)
 `spyder.config.fonts.MONOSPACE`, `spyder.config.manager.ConfigurationManager`)
 só para aquela pasta; os testes de lá provam o launcher sem Qt nem display.
 
+## Intermitência conhecida em `tests/e2e`
+
+Em rodadas em que várias instâncias do Spyder sobem e são mortas em sequência
+(o padrão do próprio harness), de vez em quando um teste falha com "o Spyder
+morreu na subida (código 0)": o `mainwindow.main()` retorna normalmente nos
+primeiros 30 s, sem traceback, sem "Spyder is already running" e sem evento de
+console (`Handling signal`). Não reproduziu com `SPYDER_DEBUG=3`. Reexecute o
+arquivo; se persistir isolado, aí é regressão.
+
 ## O que a suíte deliberadamente não testa
 
 Nada que dependa de rede, conta ou credencial real. Login das CLIs,

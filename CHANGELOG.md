@@ -18,6 +18,9 @@ Launcher for the `bernardogoltz/spyder` fork with the AI Terminal pane.
 - Persistent per-project profile in `<root>/.spyproject/setup-spyder/`, seeded
   once (versioned seed, never rewritten on later starts); ephemeral profile
   keeps the old temp-directory behaviour.
+- The Spyder child tree (kernels, pylsp, QtWebEngine) is tied to the launcher:
+  Job Object with kill-on-close on Windows, own session plus SIGTERM/SIGINT
+  forwarding on POSIX, so killing `setup-spyder` never leaves orphans.
 - Clean child bootstrap (`python -m setup_spyder.bootstrap`): the parent never
   imports Spyder's configuration or Qt; `SPYDER_CONFDIR`, `SETUP_SPYDER_AGENT`,
   `SETUP_SPYDER_WORKDIR`, `SETUP_SPYDER_AUTOSTART` are set before Spyder starts.

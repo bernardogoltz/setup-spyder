@@ -331,89 +331,10 @@ def _kernel32():
 
 
 def _assign_job(pid: int):
-    """Put ``pid`` in a Job Object that kills every descendant when closed."""
-    import ctypes
-    from ctypes import wintypes
+    """Job Object with KILL_ON_JOB_CLOSE; shared with the launcher."""
+    from setup_spyder._children import assign_job
 
-    JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE = 0x2000
-    JobObjectExtendedLimitInformation = 9
-    PROCESS_SET_QUOTA = 0x0100
-    PROCESS_TERMINATE = 0x0001
-
-    class IO_COUNTERS(ctypes.Structure):
-        _fields_ = [
-            ("ReadOperationCount", ctypes.c_ulonglong),
-            ("WriteOperationCount", ctypes.c_ulonglong),
-            ("OtherOperationCount", ctypes.c_ulonglong),
-            ("ReadTransferCount", ctypes.c_ulonglong),
-            ("WriteTransferCount", ctypes.c_ulonglong),
-            ("OtherTransferCount", ctypes.c_ulonglong),
-        ]
-
-    class JOBOBJECT_BASIC_LIMIT_INFORMATION(ctypes.Structure):
-        _fields_ = [
-            ("PerProcessUserTimeLimit", ctypes.c_longlong),
-            ("PerJobUserTimeLimit", ctypes.c_longlong),
-            ("LimitFlags", wintypes.DWORD),
-            ("MinimumWorkingSetSize", ctypes.c_size_t),
-            ("MaximumWorkingSetSize", ctypes.c_size_t),
-            ("ActiveProcessLimit", wintypes.DWORD),
-            ("Affinity", ctypes.c_size_t),
-            ("PriorityClass", wintypes.DWORD),
-            ("SchedulingClass", wintypes.DWORD),
-        ]
-
-    class JOBOBJECT_EXTENDED_LIMIT_INFORMATION(ctypes.Structure):
-        _fields_ = [
-            ("BasicLimitInformation", JOBOBJECT_BASIC_LIMIT_INFORMATION),
-            ("IoInfo", IO_COUNTERS),
-            ("ProcessMemoryLimit", ctypes.c_size_t),
-            ("JobMemoryLimit", ctypes.c_size_t),
-            ("PeakProcessMemoryUsed", ctypes.c_size_t),
-            ("PeakJobMemoryUsed", ctypes.c_size_t),
-        ]
-
-    kernel32 = _kernel32()
-    kernel32.CreateJobObjectW.restype = wintypes.HANDLE
-    kernel32.OpenProcess.restype = wintypes.HANDLE
-    kernel32.SetInformationJobObject.argtypes = [
-        wintypes.HANDLE, ctypes.c_int, ctypes.c_void_p, wintypes.DWORD
-    ]
-    kernel32.QueryInformationJobObject.argtypes = [
-        wintypes.HANDLE, ctypes.c_int, ctypes.c_void_p, wintypes.DWORD, ctypes.c_void_p
-    ]
-    kernel32.AssignProcessToJobObject.argtypes = [wintypes.HANDLE, wintypes.HANDLE]
-    kernel32.TerminateJobObject.argtypes = [wintypes.HANDLE, wintypes.UINT]
-    kernel32.CloseHandle.argtypes = [wintypes.HANDLE]
-
-    job = kernel32.CreateJobObjectW(None, None)
-    if not job:
-        logger.warning("CreateJobObject failed (%s); tree kill degraded", ctypes.GetLastError())
-        return None
-    info = JOBOBJECT_EXTENDED_LIMIT_INFORMATION()
-    info.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE
-    if not kernel32.SetInformationJobObject(
-        job, JobObjectExtendedLimitInformation, ctypes.byref(info), ctypes.sizeof(info)
-    ):
-        logger.warning("SetInformationJobObject failed (%s)", ctypes.GetLastError())
-        kernel32.CloseHandle(job)
-        return None
-    process = kernel32.OpenProcess(PROCESS_SET_QUOTA | PROCESS_TERMINATE, False, int(pid))
-    if not process:
-        logger.warning("OpenProcess(%s) failed (%s)", pid, ctypes.GetLastError())
-        kernel32.CloseHandle(job)
-        return None
-    try:
-        if not kernel32.AssignProcessToJobObject(job, process):
-            logger.warning(
-                "AssignProcessToJobObject failed (%s); tree kill degraded",
-                ctypes.GetLastError(),
-            )
-            kernel32.CloseHandle(job)
-            return None
-    finally:
-        kernel32.CloseHandle(process)
-    return job
+    return assign_job(pid)
 
 
 def _wait_job_empty(job, timeout: float) -> bool:

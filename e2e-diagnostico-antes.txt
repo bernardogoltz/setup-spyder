@@ -1,0 +1,98 @@
+============================= test session starts =============================
+platform win32 -- Python 3.11.15, pytest-7.4.4, pluggy-1.6.0 -- C:\Users\angel\Documents\projetos\spyder\.venv\Scripts\python.exe
+PyQt5 5.15.11 -- Qt runtime 5.15.2 -- Qt compiled 5.15.2
+setup-spyder plan suite: tolerante (skips = entregas pendentes), e2e ligado
+rootdir: C:\Users\angel\Documents\projetos\spyder\setup-spyder
+configfile: pyproject.toml
+plugins: anyio-4.15.0, flaky-3.8.1, cov-7.1.0, lazy-fixture-0.6.3, mock-3.15.1, order-1.5.0, qt-4.5.0, timeout-2.4.0
+collecting ... collected 5 items
+
+tests/e2e/test_launch_spyder.py::test_o_spyder_abre_sem_nenhuma_cli_instalada PASSED [ 20%]
+tests/e2e/test_launch_spyder.py::test_o_spyder_abre_com_agent_auto PASSED [ 40%]
+tests/e2e/test_launch_spyder.py::test_nenhum_processo_fica_orfao_depois_de_fechar PASSED [ 60%]
+tests/e2e/test_launch_spyder.py::test_o_plugin_nao_abre_porta_tcp FAILED [ 80%]
+tests/e2e/test_launch_spyder.py::test_a_config_global_continua_intacta_depois_de_abrir PASSED [100%]
+
+================================== FAILURES ===================================
+______________________ test_o_plugin_nao_abre_porta_tcp _______________________
+
+spyder = <function spyder.<locals>.subir at 0x000002330EEC9440>
+
+    def test_o_plugin_nao_abre_porta_tcp(spyder):
+        """Criterio de aceitacao: nenhum servidor local para o transporte."""
+        if listening_ports() is None:
+            pytest.skip("instale psutil para checar portas em escuta")
+>       processo = spyder("--agent", "none")
+
+tests\e2e\test_launch_spyder.py:106: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+timeout = 120.0, argv = ('--agent', 'none')
+processo = <Popen: returncode: 0 args: ['C:\\Users\\angel\\Documents\\projetos\\spyder\...>
+limite = 1576113.828
+
+    def subir(*argv, timeout=ESPERA_JANELA):
+        processo = subprocess.Popen(
+            [sys.executable, "-m", "setup_spyder", "-w", str(project_root), *argv],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            encoding="utf-8",
+        errors="replace",
+            env=child_env(isolated_home),
+        )
+        processos.append(processo)
+        # Sem um sinal melhor, espera-se o processo *sobreviver* a subida:
+        # uma falha de import derruba o launcher em poucos segundos.
+        limite = time.monotonic() + min(30.0, timeout)
+        while time.monotonic() < limite:
+            if processo.poll() is not None:
+                saida = processo.stdout.read() if processo.stdout else ""
+>               pytest.fail(
+                    f"o Spyder morreu na subida (codigo {processo.returncode}):\n{saida}"
+                )
+E               Failed: o Spyder morreu na subida (codigo 0):
+E               
+E               \u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 \u25c6 setup-spyder \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510
+E               \u2502                                                                             \u2502
+E               \u2502  setup-spyder  v0.3.0  \xb7  @bernardogoltz                                    \u2502
+E               \u2502  isolated Spyder 5.x  \xb7  JetBrains Mono  \xb7  AI Terminal                     \u2502
+E               \u2502                                                                             \u2502
+E               \u2502  Hello \u2014 opening the project projeto                                        \u2502
+E               \u2502  C:\\Users\\angel\\AppData\\Local\\Temp\\pytest-of-angel\\pytest-181\\test_o_plugi  \u2502
+E               \u2502  n_nao_abre_porta_t0\\projeto                                                \u2502
+E               \u2502                                                                             \u2502
+E               \u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 isolated profile \xb7 leaves ~/.spyder-py3 untouched \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518
+E               
+E                                                                                              
+E                  Python          3.11.15                                                     
+E                  Executable      C:\Users\angel\Documents\projetos\spyder\.venv\Scripts\p�   
+E                  Environment     C:\Users\angel\Documents\projetos\spyder\.venv              
+E                  Workdir         C:\Users\angel\AppData\Local\Temp\pytest-of-angel\pytest�   
+E                                                                                              
+E               setup-spyder  \u2713 Spyder 5.6.0.dev0  \xb7  spyder-kernels 2.5.2
+E               setup-spyder  \u2713 pandas 3.0.5
+E               setup-spyder  \u2713 Font JetBrains Mono found (48 file(s))
+E               setup-spyder  \u2713 .spyproject ready (4 file(s) created):
+E               setup-spyder    file: .spyproject\config\workspace.ini
+E               setup-spyder    file: .spyproject\config\codestyle.ini
+E               setup-spyder    file: .spyproject\config\vcs.ini
+E               setup-spyder    file: .spyproject\config\encoding.ini
+E               setup-spyder  Profile (project): C:\Users\angel\AppData\Local\Temp\pytest-of-angel\pytest-181\test_o_plugin_nao_abre_porta_t0\projeto\.spyproject\setup-spyder
+E               setup-spyder  (the user's ~/.spyder-py3 is left untouched)
+E               setup-spyder  \u2713 Hiding 27 name(s) from the Project pane:
+E               setup-spyder    hidden: .claude, .coverage, .dockerignore, .docs, .editorconfig, .eggs, .env, .gitattributes, .github, .gitignore, .gitlab, .mypy_cache, .pre-commit-config.yaml, .python-version, .ruff_cache, .spyproject\setup-spyder, .tox, .venv, build, desktop.ini, dist, env, htmlcov, node_modules, poetry.lock, uv.lock, venv
+E               setup-spyder    agent: none
+E               setup-spyder    command: C:\Users\angel\Documents\projetos\spyder\.venv\Scripts\python.exe -m setup_spyder.bootstrap --conf-dir C:\Users\angel\AppData\Local\Temp\pytest-of-angel\pytest-181\test_o_plugin_nao_abre_porta_t0\projeto\.spyproject\setup-spyder -w C:\Users\angel\AppData\Local\Temp\pytest-of-angel\pytest-181\test_o_plugin_nao_abre_porta_t0\projeto -p C:\Users\angel\AppData\Local\Temp\pytest-of-angel\pytest-181\test_o_plugin_nao_abre_porta_t0\projeto
+E               setup-spyder  \u2713 Opening Spyder now...
+E               setup-spyder  Close the Spyder window to finish.
+E               Could not load translations for pt_BR due to: FileNotFoundError - [Errno 2] No translation file found for domain: 'spyder'
+E               setup-spyder  \u2713 Profile seeded (version 1, font 'JetBrains Mono')
+E               setup-spyder    SPYDER_CONFDIR: C:\Users\angel\AppData\Local\Temp\pytest-of-angel\pytest-181\test_o_plugin_nao_abre_porta_t0\projeto\.spyproject\setup-spyder
+E               setup-spyder    config: C:\Users\angel\AppData\Local\Temp\pytest-of-angel\pytest-181\test_o_plugin_nao_abre_porta_t0\projeto\.spyproject\setup-spyder\config\spyder.ini
+E               setup-spyder  \u2713 Spyder exited with code 0
+E               setup-spyder  \u2713 Spyder closed.
+
+tests\e2e\test_launch_spyder.py:57: Failed
+=========================== short test summary info ===========================
+FAILED tests/e2e/test_launch_spyder.py::test_o_plugin_nao_abre_porta_tcp - Fa...
+=================== 1 failed, 4 passed in 141.33s (0:02:21) ===================
