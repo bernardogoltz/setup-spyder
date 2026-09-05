@@ -35,11 +35,16 @@ dependencies = [
     "spyder @ git+https://github.com/bernardogoltz/spyder.git@42de553c5104c860f83f162031c5f9f655187beb",
     "pywinpty>=2; platform_system == 'Windows'",
     "ptyprocess>=0.7; platform_system != 'Windows'",
-    # PyQt5-Qt5 / PyQtWebEngine-Qt5 > 5.15.2 publish no Windows wheel; without
-    # this marker uv's universal resolution picks 5.15.19 and fails on Windows
-    # for every consumer of this package.
+    # The Qt payload has no version that runs everywhere: PyQt5-Qt5 /
+    # PyQtWebEngine-Qt5 > 5.15.2 publish no Windows wheel, and 5.15.2 publishes
+    # no macosx arm64 wheel (Apple Silicon arrived in 5.15.11). Both halves of
+    # the pin are needed: the Windows bound alone lets uv settle on 5.15.2 for
+    # every platform and break Apple Silicon, so the complementary lower bound
+    # is what forces the resolution to fork per platform.
     "pyqt5-qt5<5.15.3; platform_system == 'Windows'",
     "pyqtwebengine-qt5<5.15.3; platform_system == 'Windows'",
+    "pyqt5-qt5>=5.15.11; platform_system != 'Windows'",
+    "pyqtwebengine-qt5>=5.15.11; platform_system != 'Windows'",
 ]
 
 [project.urls]
@@ -57,10 +62,16 @@ setup_spyder_ai = "setup_spyder.plugin.plugin:AITerminalPlugin"
 
 [tool.uv]
 prerelease = "allow"
-# PyQt5-Qt5 / PyQtWebEngine-Qt5 5.15.19 ship no win_amd64 wheel, so the lock
-# has to fork the resolution and keep a Windows-installable Qt for Windows.
+# The Qt payload packages have no version that covers every platform:
+# PyQt5-Qt5 / PyQtWebEngine-Qt5 5.15.19 ship no win_amd64 wheel, and 5.15.2 (the
+# last one that does) ships no macosx arm64 wheel. Listing every environment the
+# project is built and tested on forces uv to fork the resolution per platform
+# instead of settling on one version that is uninstallable somewhere.
 required-environments = [
     "sys_platform == 'win32' and platform_machine == 'AMD64'",
+    "sys_platform == 'darwin' and platform_machine == 'arm64'",
+    "sys_platform == 'darwin' and platform_machine == 'x86_64'",
+    "sys_platform == 'linux' and platform_machine == 'x86_64'",
 ]
 
 [dependency-groups]
