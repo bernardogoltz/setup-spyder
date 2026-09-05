@@ -14,8 +14,7 @@ Runs on Python 3.9 → 3.12 (PyQt5 5.15 wheels) on Windows, macOS and Linux.
 
 ```shell
 uv add --dev git+https://github.com/bernardogoltz/setup-spyder
-uv run setup-spyder --agent codex        # or: claude | auto | none
-```
+uv run setup-spyder --agent claude
 
 `uv run python -c "import spyder; print(spyder.__version__)"` prints the
 fork's version (`5.6.0.dev0`), not the PyPI `spyder`.
