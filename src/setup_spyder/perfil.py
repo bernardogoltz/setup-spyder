@@ -25,7 +25,7 @@ EPHEMERAL_PREFIX = "setup-spyder-conf-"
 FONT_FAMILY = "JetBrains Mono"
 
 #: Bump when the seeded values change; the profile is re-seeded on next boot.
-SEED_VERSION: int = 1
+SEED_VERSION: int = 2
 SEED_MARKER = "setup-spyder-seed.json"
 
 #: Names hidden from Spyder's Project pane, on top of the ones Spyder already
@@ -66,15 +66,26 @@ HIDDEN_PATHS = (
     CONF_DIRNAME,
 )
 
-#: Always seeded: silence the update, tour and DPI dialogs and the kernel
-#: confirmations, and make Spyder use the interpreter that started it.
-#: Internal error reports stay enabled (plan, section 8) and single-instance
-#: mode is left at Spyder's default so a project profile is not opened twice
-#: (plan, section 5.3); the ephemeral profile passes --new-instance instead.
+#: Always seeded: silence the update, tour, DPI, missing-dependency and
+#: internal-error dialogs and the kernel confirmations, and make Spyder use the
+#: interpreter that started it.
+#:
+#: Internal error reports and the missing-dependency warning used to stay on
+#: (plan, section 8). The owner of the fork revoked that: this is a personal
+#: profile and both are boot noise. The tradeoff is real -- an internal Spyder
+#: error now fails silently, with nothing offering to report it. Both are
+#: reachable again in Preferences > Application > Advanced.
+#:
+#: Single-instance mode is left at Spyder's default so a project profile is not
+#: opened twice (plan, section 5.3); the ephemeral profile passes
+#: --new-instance instead.
 POPUPS: ConfMap = {
     ("main", "check_updates_on_startup"): False,
     ("main", "show_dpi_message"): False,
     ("main", "prompt_on_exit"): False,
+    ("main", "show_internal_errors"): False,
+    # Gated by the fork; a Spyder without the key simply ignores it.
+    ("main", "show_missing_dependencies"): False,
     ("tours", "show_tour_message"): False,
     ("ipython_console", "ask_before_restart"): False,
     ("ipython_console", "ask_before_closing"): False,

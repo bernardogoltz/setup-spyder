@@ -90,7 +90,7 @@ As oito divergências, e como foram resolvidas:
 | 4 “não adicionar `claude-agent-sdk`” | dependência do SDK | `requires(setup-spyder)` não cita SDK nenhum |
 | 1 / 11 “nenhuma flag de bypass implícita” | `permission_mode="bypassPermissions"` | removido |
 | 7 “sem monkeypatch global de `QApplication.beep`” | `patches.py` trocava `beep` | `patches.py` só filtra o painel Projetos |
-| 8 “não desabilitar avisos críticos” | `show_internal_errors=False`, `compute_dependencies` anulado | `POPUPS` sem `show_internal_errors`; patch removido |
+| 8 “não desabilitar avisos críticos” | `show_internal_errors=False`, `compute_dependencies` anulado | regra revogada pelo dono do fork: `POPUPS` desliga os dois avisos por config (`show_internal_errors`, `show_missing_dependencies`); o patch continua proibido |
 | 5.3 “não limpar `CONDA_*` sem prova” | `strip_conda_env`, `find_conda` anulado | o filho herda `os.environ` intacto |
 | 5.3 “seed versionado, não regravar a cada boot” | `apply_perfil` em toda inicialização | `seed_profile` com marcador versionado |
 

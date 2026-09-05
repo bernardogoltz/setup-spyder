@@ -107,15 +107,23 @@ def test_nao_ha_monkeypatch_global_de_qapplication_beep(fontes):
     assert not ofensores, f"QApplication.beep reatribuido em {ofensores}"
 
 
-# Secao 8 - nao desabilitar avisos criticos globalmente -----------------
+# Secao 8 - avisos criticos: silenciados por config, nunca por patch ----
 
 
-def test_erros_internos_e_avisos_de_dependencia_continuam_ligados(fontes):
-    """Secao 8: 'Nao desabilitar globalmente caixas de erro, avisos de
-    dependencia ou mensagens criticas'."""
+def test_os_avisos_criticos_sao_desligados_por_config_e_nao_por_patch(fontes):
+    """Secao 8, revista: o dono do fork revogou 'nao desabilitar avisos
+    criticos' -- este e um perfil pessoal e as duas caixas sao ruido de boot.
+
+    O que a secao 8 protegia de verdade sobrevive: o launcher desliga os avisos
+    pela configuracao publica do Spyder, uma chave que o usuario pode remarcar
+    em Preferencias, e nunca anulando `compute_dependencies` por monkeypatch.
+    Um patch valeria para toda a sessao, sem nada na interface revelando que o
+    aviso foi suprimido.
+    """
     from setup_spyder.perfil import POPUPS
 
-    assert POPUPS.get(("main", "show_internal_errors")) is not False
+    assert POPUPS[("main", "show_internal_errors")] is False
+    assert POPUPS[("main", "show_missing_dependencies")] is False
     assert "compute_dependencies" not in _texto(fontes)
 
 

@@ -308,7 +308,7 @@ def _link_directory(target: Path, link: Path) -> None:
 
 
 @pytest.mark.phase2
-def test_seed_grava_as_chaves_no_spyder_ini(perfil_novo, perfil, tmp_path):
+def test_seed_grava_as_chaves_no_spyder_ini(perfil_novo, tmp_path):
     """O que o seed escreve tem de chegar ao `spyder.ini` que o Spyder le."""
     import configparser
 
@@ -320,7 +320,8 @@ def test_seed_grava_as_chaves_no_spyder_ini(perfil_novo, perfil, tmp_path):
     ini.read(conf_dir / "config" / "spyder.ini", encoding="utf-8")
     assert ini["main_interpreter"]["default"] == "True"
     assert ini["main"]["check_updates_on_startup"] == "False"
-    assert "show_internal_errors" not in dict(perfil.POPUPS)
+    assert ini["main"]["show_internal_errors"] == "False"
+    assert ini["main"]["show_missing_dependencies"] == "False"
     assert ini["editor"]["wrap"] == "True"
     assert "Consolas" in ini["appearance"]["font/family"]
 
