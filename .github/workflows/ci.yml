@@ -71,7 +71,11 @@ jobs:
         run: uvx twine check --strict dist/*
       - name: The wheel must carry the plugin entry point and the web assets
         run: |
-          uv run --with setup-spyder@dist/*.whl --no-project python - <<'EOF'
+          # The shell does not expand a glob inside `name@dist/*.whl`; resolve
+          # the wheel path first and hand uv a plain path.
+          wheel="$(ls dist/*.whl)"
+          echo "checking $wheel"
+          uv run --with "$wheel" --no-project python - <<'EOF'
           from importlib.metadata import distribution
           from importlib.resources import files
           dist = distribution("setup-spyder")
