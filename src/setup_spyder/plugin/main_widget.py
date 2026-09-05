@@ -9,6 +9,7 @@ listener, no shell.
 
 from __future__ import annotations
 
+import base64
 import codecs
 import json
 import logging
@@ -61,6 +62,16 @@ logger = logging.getLogger("setup_spyder.plugin")
 
 ASSETS_DIR = Path(__file__).parent / "assets"
 QWEBCHANNEL_RESOURCE = ":/qtwebchannel/qwebchannel.js"
+
+# The page runs in a QtWebEngine process, which doesn't see the fonts Qt
+# registered for the widgets, so the ones Spyder bundles have to travel with
+# the page itself.
+BUNDLED_WEBFONTS = (
+    ("JetBrains Mono", "JetBrainsMono-Regular.woff2", 400, "normal"),
+    ("JetBrains Mono", "JetBrainsMono-Italic.woff2", 400, "italic"),
+    ("JetBrains Mono", "JetBrainsMono-Bold.woff2", 700, "normal"),
+    ("JetBrains Mono", "JetBrainsMono-BoldItalic.woff2", 700, "italic"),
+)
 
 INSTALL_HINT = (
     "Install the PTY backend in the project environment: "
@@ -136,12 +147,37 @@ def read_qwebchannel_js() -> str:
         resource.close()
 
 
+def font_faces_css() -> str:
+    """``@font-face`` rules, as data URIs, for the fonts Spyder ships."""
+    try:
+        from spyder.config.fonts import get_bundled_font_path
+    except Exception as exc:  # embedded fonts are cosmetic; never block the pane
+        logger.debug("bundled fonts unavailable: %s", exc)
+        return ""
+
+    rules = []
+    for family, fname, weight, style in BUNDLED_WEBFONTS:
+        try:
+            data = Path(get_bundled_font_path("webfonts", fname)).read_bytes()
+        except OSError as exc:
+            logger.debug("font file unavailable: %s", exc)
+            continue
+        source = base64.b64encode(data).decode("ascii")
+        rules.append(
+            f'@font-face {{ font-family: "{family}"; font-weight: {weight};'
+            f' font-style: {style}; font-display: block;'
+            f' src: url(data:font/woff2;base64,{source}) format("woff2"); }}'
+        )
+    return "\n".join(rules)
+
+
 def build_page(options: dict) -> str:
     """Inline every asset into ``terminal.html`` so the page needs no URL."""
     theme = options.get("theme") or {}
     payload = json.dumps(options).replace("<", "\\u003c")
     page = read_asset("terminal.html")
     replacements = {
+        "/*__FONT_FACES__*/": font_faces_css(),
         "/*__XTERM_CSS__*/": read_asset("xterm.css"),
         "/*__QWEBCHANNEL_JS__*/": read_qwebchannel_js(),
         "/*__XTERM_JS__*/": read_asset("xterm.js"),
