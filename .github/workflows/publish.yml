@@ -13,8 +13,9 @@ on:
   workflow_dispatch:
 
 env:
-  QT_QPA_PLATFORM: offscreen
   UV_PRERELEASE: allow
+  # No QT_QPA_PLATFORM=offscreen: the test job runs on Windows, where the
+  # offscreen platform crashes QtWebEngine (see ci.yml).
 
 jobs:
   test:
@@ -24,6 +25,7 @@ jobs:
       - uses: astral-sh/setup-uv@v5
         with:
           python-version: "3.12"
+          cache-dependency-glob: "pyproject.toml"
       - name: Tests (everything except the GUI e2e run)
         run: uv run pytest -m "not e2e" -v
 
@@ -37,6 +39,7 @@ jobs:
       - uses: astral-sh/setup-uv@v5
         with:
           python-version: "3.12"
+          cache-dependency-glob: "pyproject.toml"
 
       - name: Check the release tag matches the package version
         if: github.event_name == 'release'

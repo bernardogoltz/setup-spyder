@@ -13,24 +13,27 @@ Com ele os testes de widget nao dependem de ConPTY, de `codex` nem de
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 
-from helpers.pending import require_attr, require_module
-
-pytest.importorskip("pytestqt", reason="testes de Qt exigem pytest-qt")
-pytest.importorskip("qtpy", reason="testes de Qt exigem qtpy")
+from helpers.pending import pular_diretorio, require_attr, require_module, requisitos
 
 # `QtWebEngineWidgets` precisa ser importado antes de existir um QApplication
 # (PyQt5 exige `Qt.AA_ShareOpenGLContexts` antes da criacao). O Spyder faz isso
 # cedo em `mainwindow.py`; aqui o `qapp` do pytest-qt e criado tarde, entao o
 # import fica no topo do conftest, antes de qualquer fixture.
-pytest.importorskip(
-    "qtpy.QtWebEngineWidgets", reason="o painel exige QtWebEngine (PyQtWebEngine)"
+#
+# Nada de `pytest.importorskip` aqui: num conftest aninhado ele derruba a
+# coleta da sessao inteira (veja `helpers.pending.pular_diretorio`). Se algo
+# faltar, so os testes desta pasta sao pulados, com a razao.
+FALTA = requisitos(
+    ("pytestqt", "testes de Qt exigem pytest-qt"),
+    ("qtpy", "testes de Qt exigem qtpy"),
+    ("qtpy.QtWebEngineWidgets", "o painel exige QtWebEngine (PyQtWebEngine)"),
 )
 
-from helpers.fake_pty import FakePTYWorker  # noqa: E402
-
-pytestmark = pytest.mark.qt
+pytest_collection_modifyitems = pular_diretorio(Path(__file__).parent, FALTA)
 
 
 @pytest.fixture(autouse=True)
@@ -51,12 +54,16 @@ def _silencia_registro_duplicado():
 
 @pytest.fixture()
 def fake_worker():
+    from helpers.fake_pty import FakePTYWorker
+
     return FakePTYWorker()
 
 
 @pytest.fixture()
 def worker_factory():
     """Fabrica que registra cada worker criado, para provar o `restart`."""
+    from helpers.fake_pty import FakePTYWorker
+
     criados: list[FakePTYWorker] = []
 
     def factory(*args, **kwargs):

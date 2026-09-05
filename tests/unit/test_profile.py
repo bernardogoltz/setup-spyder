@@ -258,11 +258,17 @@ def test_reset_recusa_caminho_fora_do_perfil_esperado(
         caminho.mkdir(parents=True, exist_ok=True)
         testemunha = caminho / "importante.txt"
         testemunha.write_text("nao me apague", encoding="utf-8")
+    # `~/.spyder-py3` so existe onde o Spyder ja rodou; num runner limpo nao
+    # existe, e a recusa nao pode nem apagar nem criar o caminho.
+    existia = caminho.exists()
 
     with pytest.raises((ValueError, PermissionError)):
         reset_profile(caminho, project_root=project_root)
 
-    assert caminho.exists(), f"reset_profile apagou {caminho}"
+    if existia:
+        assert caminho.exists(), f"reset_profile apagou {caminho}"
+    else:
+        assert not caminho.exists(), f"reset_profile criou {caminho}"
     if testemunha is not None:
         assert testemunha.read_text(encoding="utf-8") == "nao me apague"
 

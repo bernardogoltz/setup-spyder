@@ -21,9 +21,13 @@ from pathlib import Path
 
 import pytest
 
-from helpers.pending import require_attr, require_module
+from helpers.pending import pular_diretorio, require_attr, require_module, requisitos
 
-pytest.importorskip("pytestqt", reason="o PTYWorker e um QObject; use pytest-qt")
+# Sem `pytest.importorskip` no topo: num conftest aninhado ele derruba a coleta
+# da sessao inteira (veja `helpers.pending.pular_diretorio`).
+FALTA = requisitos(("pytestqt", "o PTYWorker e um QObject; use pytest-qt"))
+
+pytest_collection_modifyitems = pular_diretorio(Path(__file__).parent, FALTA)
 
 HELPERS = Path(__file__).resolve().parents[1] / "helpers"
 FAKE_TUI = HELPERS / "fake_tui.py"

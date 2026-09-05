@@ -6,11 +6,13 @@ on:
   pull_request:
 
 env:
-  # Qt without a display; QtWebEngine still initialises in this mode.
-  QT_QPA_PLATFORM: offscreen
   # `spyder` is the bernardogoltz fork, pinned by commit in pyproject.toml and
   # fetched from GitHub; there is no lockfile to honour, uv resolves on the fly.
   UV_PRERELEASE: allow
+  # QT_QPA_PLATFORM=offscreen is set only on Linux (see the `full` job): the
+  # Windows runner has a desktop session, and QtWebEngine under the offscreen
+  # platform on Windows dies with an access violation the moment a
+  # QWebEngineView is created (first test in tests/qt).
 
 jobs:
   unit:
@@ -26,6 +28,7 @@ jobs:
       - uses: astral-sh/setup-uv@v5
         with:
           python-version: ${{ matrix.python-version }}
+          cache-dependency-glob: "pyproject.toml"
       - name: Unit tests (no Qt, no PTY)
         run: uv run --python ${{ matrix.python-version }} pytest -m "unit or legacy" -v
 
@@ -43,11 +46,13 @@ jobs:
       - uses: astral-sh/setup-uv@v5
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Qt runtime libraries (Linux)
+          cache-dependency-glob: "pyproject.toml"
+      - name: Qt runtime libraries and headless platform (Linux)
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
           sudo apt-get install -y libegl1 libxkbcommon-x11-0 libxcb-cursor0 libnss3 libasound2t64 libxcomposite1 libxdamage1 libxrandr2 libgbm1 libxss1
+          echo "QT_QPA_PLATFORM=offscreen" >> "$GITHUB_ENV"
       - name: Everything except the GUI e2e run
         run: uv run --python ${{ matrix.python-version }} pytest -m "not e2e" -v
 
@@ -59,6 +64,7 @@ jobs:
       - uses: astral-sh/setup-uv@v5
         with:
           python-version: "3.12"
+          cache-dependency-glob: "pyproject.toml"
       - name: Build wheel and sdist
         run: uv build
       - name: Validate package metadata

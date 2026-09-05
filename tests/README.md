@@ -5,11 +5,20 @@ aceitação da seção 11 de [`docs/plan.md`](../../docs/plan.md) do fork.
 
 ## Como rodar
 
-De dentro de `setup-spyder/` (este submódulo), com o Python do venv do fork —
-que já tem o fork `spyder` 5.6.0.dev0 e este pacote instalados em modo
-editável. Não use `uv run`/`uv sync` aqui enquanto a dependência git do fork
-não resolver, e nunca rode o pytest da raiz do fork (o `conftest.py` de lá tem
-uma fixture `autouse` que importa e reseta o `CONF` do Spyder a cada teste).
+De dentro de `setup-spyder/`. O repositório funciona sozinho: `uv run` resolve
+o fork `spyder` pinado no `pyproject.toml` direto do GitHub e cria o `.venv`
+próprio — é exatamente o que a CI faz (`.github/workflows/ci.yml`):
+
+```powershell
+cd setup-spyder
+uv run pytest -m "unit or legacy"       # job `unit` da CI: sem Qt, sem PTY
+uv run pytest -m "not e2e"              # job `full` da CI
+```
+
+Dentro do checkout do fork também dá para usar o venv da raiz, que já tem o
+fork `spyder` 5.6.0.dev0 e este pacote instalados em modo editável. Nunca rode
+o pytest *da raiz* do fork (o `conftest.py` de lá tem uma fixture `autouse`
+que importa e reseta o `CONF` do Spyder a cada teste).
 
 ```powershell
 cd setup-spyder
@@ -43,6 +52,17 @@ só roda com `SETUP_SPYDER_E2E=1`.
 `pytest-qt`, `psutil` (árvore de processos e portas em escuta),
 `pywinpty`/`ptyprocess` (backend real de PTY). Sem elas os testes
 correspondentes pulam com a razão explícita, e o resto roda.
+
+O mesmo vale para o QtWebEngine: num Linux sem `libnss3`/`libasound2` o
+import falha e só `tests/qt` é pulado. O skip é feito por
+`helpers.pending.pular_diretorio` num hook `pytest_collection_modifyitems`,
+nunca por `pytest.importorskip` no topo de um `conftest.py` aninhado — no
+pytest 7 isso derruba a coleta da sessão inteira ("collected 0 items / 1
+skipped", código 5), levando `tests/unit` junto.
+
+`QT_QPA_PLATFORM=offscreen` só no Linux. No Windows o QtWebEngine sob a
+plataforma offscreen morre com *access violation* ao criar o primeiro
+`QWebEngineView`; o runner do Windows tem sessão de desktop e não precisa.
 
 ## Os três regimes da suíte
 

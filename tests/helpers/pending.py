@@ -52,6 +52,49 @@ def require_attr(module, name: str, what: str | None = None):
     return obj
 
 
+def requisitos(*modulos: "tuple[str, str]") -> "str | None":
+    """Importa cada ``(modulo, razao)``; devolve a razao do primeiro que faltar.
+
+    Os imports acontecem na ordem dada, no momento da chamada - serve tambem
+    para importar `QtWebEngineWidgets` antes de existir um QApplication.
+    """
+    for dotted, razao in modulos:
+        try:
+            importlib.import_module(dotted)
+        except ImportError as exc:
+            return f"{razao} ({exc})"
+    return None
+
+
+def pular_diretorio(diretorio: Path, razao: "str | None"):
+    """Hook ``pytest_collection_modifyitems`` que pula so os itens de ``diretorio``.
+
+    Um ``pytest.importorskip`` no topo de um ``conftest.py`` aninhado nao pula
+    so aquela pasta: o ``Skipped`` sobe durante a coleta da sessao e o pytest 7
+    termina com "collected 0 items / 1 skipped" e codigo 5 - a suite inteira
+    some, inclusive ``tests/unit``. Foi o que aconteceu no Linux sem as libs do
+    QtWebEngine. Marcar os itens depois da coleta mantem o skip no lugar certo
+    e com a razao visivel no ``-ra``.
+
+    Uso, no ``conftest.py`` da pasta::
+
+        FALTA = requisitos(("qtpy", "testes de Qt exigem qtpy"))
+        pytest_collection_modifyitems = pular_diretorio(Path(__file__).parent, FALTA)
+    """
+    raiz = Path(diretorio).resolve()
+
+    def pytest_collection_modifyitems(config, items):  # noqa: ARG001
+        if razao is None:
+            return
+        marca = pytest.mark.skip(reason=razao)
+        for item in items:
+            caminho = Path(str(item.fspath)).resolve()
+            if caminho == raiz or raiz in caminho.parents:
+                item.add_marker(marca)
+
+    return pytest_collection_modifyitems
+
+
 def child_env(home: Path, **extra: str) -> dict:
     """Ambiente para subprocessos: HOME isolado, sem herdar SPYDER_CONFDIR."""
     env = dict(os.environ)

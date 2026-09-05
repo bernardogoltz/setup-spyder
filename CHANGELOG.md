@@ -1,5 +1,25 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+- CI was red on every job since 0.3.0. `tests/unit/test_profile.py` asserted
+  that `~/.spyder-py3` still existed after `reset_profile` refused it, which
+  only holds on a machine where Spyder has already run; on a clean runner the
+  directory never existed. The test now checks that the refusal neither
+  deletes nor creates the path.
+- A `pytest.importorskip` at the top of `tests/qt/conftest.py` (and
+  `tests/pty/conftest.py`) skipped the *whole session* when QtWebEngine could
+  not be imported (Linux without `libnss3`): pytest 7 reported
+  "collected 0 items / 1 skipped" and exit code 5, taking `tests/unit` down
+  with it. The skip is now scoped to that directory
+  (`helpers.pending.pular_diretorio`).
+- `QT_QPA_PLATFORM=offscreen` is set only on Linux in both workflows. On the
+  Windows runner it made QtWebEngine crash with an access violation on the
+  first `QWebEngineView`, killing the `full` job mid-run.
+- `setup-uv` cache keyed on `pyproject.toml` (there is no lockfile), instead
+  of a key that never invalidates.
+
 ## 0.3.0 — 2026-09-04
 
 Launcher for the `bernardogoltz/spyder` fork with the AI Terminal pane.
